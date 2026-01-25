@@ -8,7 +8,7 @@ const renderText = (text, className, baseweight = 400) => {
       className={className}
       style={{ fontVariationSettings: `'wght' ${baseweight}` }}
     >
-      {char === "" ? "\u00A0" : char}
+      {char === " " ? "\u00A0" : char}{" "}
     </span>
   ));
 };
@@ -59,13 +59,11 @@ const Welcome = () => {
     const subcleanUP  = setuptexthovr(subref.current, "subref");
   
     return () => {
-      parecleanUP()
-      subcleanUP()
+      parecleanUP?.();
+      subcleanUP?.();
     }
   
-  }, []);
-
-  return (
+  }, []);  return (
     <section id="welcome">
       <p ref={subref}>
         {renderText(
