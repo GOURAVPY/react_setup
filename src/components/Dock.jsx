@@ -3,8 +3,10 @@ import { dockApps } from "#constants/indax.js";
 import { Tooltip } from "react-tooltip";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import useWindowStore from "../store/window";
 
 const Dock = () => {
+  const { openWindow, closeWindow, windows } = useWindowStore();
   const Dockref = useRef(null);
 
   useGSAP(() => {
@@ -57,8 +59,17 @@ const Dock = () => {
     };
   }, []);
 
-  const toggleapp = (app) => {
-    //opne teb logic
+  const toggleApp = (app) => {
+    if (!app.canOpen) return;
+
+    const window = windows[app.id];
+
+    if (window.isOpne) {
+      closeWindow(app.id);
+    } else {
+      openWindow(app.id);
+    }
+    console.log(windows);
   };
 
   return (
@@ -75,7 +86,7 @@ const Dock = () => {
               data-tooltip-content={name}
               data-tooltip-delay-show={150}
               disabled={!canOpen}
-              onClick={() => toggleapp({ id, canOpen })}
+              onClick={() => toggleApp({ id, canOpen })}
             >
               {" "}
               <img
