@@ -8,7 +8,8 @@ const renderText = (text, className, baseweight = 400) => {
       className={className}
       style={{ fontVariationSettings: `'wght' ${baseweight}` }}
     >
-      {char === " " ? "\u00A0" : char}{" "}
+      {char === "" ? "\u00A0" : char}
+      {""}
     </span>
   ));
 };
@@ -34,7 +35,7 @@ const setuptexthovr = (container, type) => {
     letters.forEach((letter) => {
       const { left: l, width: w } = letter.getBoundingClientRect();
       const distance = Math.abs(mouseX - (l - left + w / 2));
-      const intensity = Math.exp(-(distance ** 2) / 2000);
+      const intensity = Math.exp(-(distance ** 2) / 5000);
       animeteletter(letter, min + (max - min) * intensity);
     });
   };
@@ -56,18 +57,18 @@ const Welcome = () => {
 
   useGSAP(() => {
     const parecleanUP = setuptexthovr(pareref.current, "pareref");
-    const subcleanUP  = setuptexthovr(subref.current, "subref");
-  
+    const subcleanUP = setuptexthovr(subref.current, "subref");
+
     return () => {
       parecleanUP?.();
       subcleanUP?.();
-    }
-  
-  }, []);  return (
+    };
+  }, []);
+  return (
     <section id="welcome">
       <p ref={subref}>
         {renderText(
-          "Hi, i'm Gourav Welcome to my",
+          "Hi, I'M Gourav Welcome to my",
           "text-3xl font-georama",
           100,
         )}
@@ -77,7 +78,10 @@ const Welcome = () => {
       </h1>
 
       <div className="small-screen">
-        <p>This portfolio is designed for desktop/tablet screens only.</p>
+        <p>
+          This portfolio is designed for desktop/tablet screens only.OR YOU Want
+          to Try u Can on DestopTap
+        </p>
       </div>
     </section>
   );
