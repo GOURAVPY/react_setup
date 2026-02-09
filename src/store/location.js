@@ -20,4 +20,5 @@ const useLocationStore = create(
   })),
 );
 
-export default useLocationStore
+export default useLocationStore;
+  

@@ -105,20 +105,16 @@ const techStack = [
     items: ["React.js", "Next.js", "TypeScript"],
   },
   {
-    category: "Mobile",
-    items: ["React Native", "Expo"],
-  },
-  {
     category: "Styling",
-    items: ["Tailwind CSS", "Sass", "CSS"],
+    items: ["Tailwind CSS", "CSS", "Bootstrap"],
   },
   {
     category: "Backend",
-    items: ["Node.js", "Express", "NestJS", "Hono"],
+    items: ["Node.js", "Express", "NestJS"],
   },
   {
     category: "Database",
-    items: ["MongoDB", "PostgreSQL"],
+    items: ["MongoDB", "MYSQL"],
   },
   {
     category: "Dev Tools",
@@ -493,16 +489,62 @@ export const locations = {
 const INITIAL_Z_INDEX = 1000;
 
 const WINDOW_CONFIG = {
-  finder:   { isOpen: false, isMaximized: false, isMinimized: false, zIndex: INITIAL_Z_INDEX, data: null },
-  contact:  { isOpen: false, isMaximized: false, isMinimized: false, zIndex: INITIAL_Z_INDEX, data: null },
-  resume:   { isOpen: false, isMaximized: false, isMinimized: false, zIndex: INITIAL_Z_INDEX, data: null },
-  safari:   { isOpen: false, isMaximized: false, isMinimized: false, zIndex: INITIAL_Z_INDEX, data: null },
-  photos:   { isOpen: false, isMaximized: false, isMinimized: false, zIndex: INITIAL_Z_INDEX, data: null },
-  terminal: { isOpen: false, isMaximized: false, isMinimized: false, zIndex: INITIAL_Z_INDEX, data: null },
-  txtfile:  { isOpen: false, isMaximized: false, isMinimized: false, zIndex: INITIAL_Z_INDEX, data: null },
-  imgfile:  { isOpen: false, isMaximized: false, isMinimized: false, zIndex: INITIAL_Z_INDEX, data: null },
+  finder: {
+    isOpen: false,
+    isMaximized: false,
+    isMinimized: false,
+    zIndex: INITIAL_Z_INDEX,
+    data: null,
+  },
+  contact: {
+    isOpen: false,
+    isMaximized: false,
+    isMinimized: false,
+    zIndex: INITIAL_Z_INDEX,
+    data: null,
+  },
+  resume: {
+    isOpen: false,
+    isMaximized: false,
+    isMinimized: false,
+    zIndex: INITIAL_Z_INDEX,
+    data: null,
+  },
+  safari: {
+    isOpen: false,
+    isMaximized: false,
+    isMinimized: false,
+    zIndex: INITIAL_Z_INDEX,
+    data: null,
+  },
+  photos: {
+    isOpen: false,
+    isMaximized: false,
+    isMinimized: false,
+    zIndex: INITIAL_Z_INDEX,
+    data: null,
+  },
+  terminal: {
+    isOpen: false,
+    isMaximized: false,
+    isMinimized: false,
+    zIndex: INITIAL_Z_INDEX,
+    data: null,
+  },
+  txtfile: {
+    isOpen: false,
+    isMaximized: false,
+    isMinimized: false,
+    zIndex: INITIAL_Z_INDEX,
+    data: null,
+  },
+  imgfile: {
+    isOpen: false,
+    isMaximized: false,
+    isMinimized: false,
+    zIndex: INITIAL_Z_INDEX,
+    data: null,
+  },
 };
 
-
-export { INITIAL_Z_INDEX, WINDOW_CONFIG , };
-
+export { INITIAL_Z_INDEX, WINDOW_CONFIG };
