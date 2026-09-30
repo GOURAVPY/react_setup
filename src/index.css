@@ -37,7 +37,7 @@ body {
     }
 
     nav {
-        @apply flex justify-between items-center bg-white/50 backdrop-blur-3xl p-2 px-5 select-none;
+        @apply relative z-[100001] flex justify-between items-center bg-white/50 backdrop-blur-3xl p-2 px-5 select-none;
 
         div {
             @apply flex items-center max-sm:w-full max-sm:justify-center gap-5;
@@ -57,6 +57,30 @@ body {
 
         time {
             @apply text-sm font-medium text-black;
+        }
+
+        .theme-menu {
+            @apply relative;
+
+            > button {
+                @apply block cursor-pointer;
+            }
+
+            section {
+                @apply absolute right-0 top-full mt-3 w-44 p-1.5 rounded-xl bg-white/80 backdrop-blur-3xl shadow-2xl border border-gray-200;
+
+                h3 {
+                    @apply px-2 py-1 text-xs font-semibold text-gray-500;
+                }
+
+                button {
+                    @apply w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm text-left cursor-pointer hover:bg-blue-500 hover:text-white;
+
+                    span {
+                        @apply flex-1;
+                    }
+                }
+            }
         }
     }
 }
@@ -79,7 +103,11 @@ body {
     }
 
     #dock {
-        @apply absolute bottom-5 left-1/2 -translate-x-1/2 z-50 select-none max-sm:hidden;
+        @apply absolute bottom-5 left-1/2 -translate-x-1/2 z-[100000] select-none max-sm:hidden;
+
+        .dock-dot {
+            @apply absolute -bottom-1 size-1 rounded-full bg-white/90;
+        }
 
         .dock-container {
             @apply bg-white/20 backdrop-blur-md justify-between rounded-2xl p-1.5 flex items-end gap-1.5;
@@ -101,16 +129,24 @@ body {
     #window-controls {
         @apply flex gap-2;
 
+        button {
+            @apply size-3.5 rounded-full cursor-pointer flex-center;
+
+            svg {
+                @apply size-2.5 stroke-3 text-black/60 opacity-0 group-hover:opacity-100;
+            }
+        }
+
         .close {
-            @apply size-3.5 rounded-full bg-[#ff6157] cursor-pointer;
+            @apply bg-[#ff6157];
         }
 
         .minimize {
-            @apply size-3.5 rounded-full bg-[#ffc030];
+            @apply bg-[#ffc030];
         }
 
         .maximize {
-            @apply size-3.5 rounded-full bg-[#2acb42];
+            @apply bg-[#2acb42];
         }
     }
 
@@ -171,6 +207,11 @@ body {
 
         .techstack {
             @apply text-sm font-roboto p-5;
+
+            .cursor {
+                @apply inline-block w-2 h-4 bg-gray-700 align-text-bottom;
+                animation: cursor-blink 1s steps(1) infinite;
+            }
 
             .label {
                 @apply flex items-center ms-10 mt-7;
@@ -333,6 +374,50 @@ body {
             }
         }
 
+        #window-header {
+            @apply h-12;
+
+            button {
+                @apply cursor-pointer;
+            }
+
+            .search {
+                @apply flex items-center gap-2 w-56 px-2 py-1 rounded-md bg-white border border-gray-300 text-gray-500 focus-within:border-blue-600;
+
+                input {
+                    @apply flex-1 min-w-0 outline-none text-gray-800 placeholder:text-gray-400;
+                }
+
+                button {
+                    @apply flex-center;
+                }
+            }
+        }
+
+        .results {
+            @apply flex-1 min-w-0 p-5 bg-white max-h-96 overflow-y-auto;
+
+            h3 {
+                @apply text-xs font-medium text-gray-400 mb-3;
+            }
+
+            li {
+                @apply flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer hover:bg-gray-100;
+
+                img {
+                    @apply size-6 object-contain;
+                }
+
+                p {
+                    @apply text-sm font-medium truncate;
+                }
+
+                span {
+                    @apply ml-auto pl-3 text-xs text-gray-400 truncate;
+                }
+            }
+        }
+
         .content {
             @apply flex-1 p-8 bg-white max-w-2xl relative;
 
@@ -395,4 +480,199 @@ body {
     }
 }
 
-.window { position: absolute; /* or fixed */ background: white; border: 1px solid #ccc; } .window-maximized { top: 0; left: 0; width: 100%; height: 100%; } .window-minimized { width: 200px; height: 40px; position: fixed; bottom: 0; left: 0; }
+@keyframes cursor-blink {
+    50% {
+        opacity: 0;
+    }
+}
+
+/* Fills the screen below the menu bar; unlayered so it wins over the per-window rules above */
+section.window-maximized {
+    top: var(--navbar-height, 2.5rem);
+    left: 0;
+    right: auto;
+    width: 100dvw;
+    max-width: none;
+    height: calc(100dvh - var(--navbar-height, 2.5rem));
+    translate: none;
+    border-radius: 0;
+    background: var(--color-white);
+    overflow: auto;
+}
+
+/* The real window while its genie copy is on screen. Children are forced
+   hidden too, since some of them transition and would linger for a moment. */
+.window-pouring,
+.window-pouring * {
+    visibility: hidden !important;
+    transition: none !important;
+}
+
+/* Dark theme. Windows and the menu bar are styled with Tailwind's light
+   palette, so dark mode swaps that palette for a dark one inside them. */
+:root[data-theme="dark"] {
+    color-scheme: dark;
+
+    &,
+    body {
+        background-image:
+            linear-gradient(rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.45)),
+            url("/images/wallpaper.png");
+    }
+
+    :is(nav, .window) {
+        --color-white: #1e1e1e;
+        --color-black: #f5f5f5;
+        --color-gray-50: #2a2a2a;
+        --color-gray-100: #333333;
+        --color-gray-200: #3a3a3a;
+        --color-gray-300: #4a4a4a;
+        --color-gray-400: #9b9b9b;
+        --color-gray-500: #a8a8a8;
+        --color-gray-700: #d4d4d4;
+        --color-gray-800: #e8e8e8;
+        --color-blue-100: #1d3a5f;
+        --color-blue-600: #6ea8ff;
+        --color-blue-700: #9cc4ff;
+        color: #f0f0f0;
+    }
+
+    /* text that sits on a coloured background stays white */
+    #contact li,
+    .theme-menu section button:hover {
+        --color-white: #ffffff;
+    }
+
+    /* black line icons */
+    nav img {
+        filter: invert(1);
+    }
+
+    #dock .dock-container {
+        background-color: rgb(30 30 30 / 0.45);
+    }
+}
+
+/* Theme switch: the circle reveal is animated from ThemeMenu.jsx, so the
+   browser's default cross-fade between the two snapshots is turned off */
+::view-transition-old(root),
+::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
+}
+
+/* Login screen: sits above the desktop and blurs it, below the startup screen */
+#login {
+    position: fixed;
+    inset: 0;
+    z-index: 500000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9vh 1.5rem 12vh;
+    color: white;
+    text-align: center;
+    background: rgb(0 0 0 / 0.35);
+    backdrop-filter: blur(40px) saturate(1.4);
+    user-select: none;
+    transition:
+        opacity 0.6s ease,
+        transform 0.6s ease;
+
+    &.leaving {
+        opacity: 0;
+        transform: scale(1.06);
+        pointer-events: none;
+    }
+
+    header {
+        font-family: var(--font-georama);
+
+        p {
+            font-size: 1.35rem;
+            font-weight: 500;
+            opacity: 0.85;
+        }
+
+        time {
+            display: block;
+            font-size: clamp(4.5rem, 12vw, 7.5rem);
+            font-weight: 700;
+            line-height: 1.05;
+            font-variant-numeric: tabular-nums;
+        }
+    }
+
+    form {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+
+        > p {
+            margin-top: 0.9rem;
+            font-size: 0.75rem;
+            opacity: 0.7;
+        }
+    }
+
+    .avatar {
+        display: grid;
+        place-items: center;
+        width: 5.5rem;
+        height: 5.5rem;
+        border-radius: 50%;
+        font-size: 2.25rem;
+        font-weight: 600;
+        background: linear-gradient(160deg, #8f9bff, #4338ca);
+        box-shadow: 0 8px 30px rgb(0 0 0 / 0.35);
+    }
+
+    h1 {
+        margin: 0.9rem 0 1rem;
+        font-size: 1.15rem;
+        font-weight: 600;
+    }
+
+    .password {
+        display: flex;
+        align-items: center;
+        width: 12.5rem;
+        padding: 0.3rem 0.3rem 0.3rem 0.9rem;
+        border-radius: 99px;
+        background: rgb(255 255 255 / 0.22);
+        border: 1px solid rgb(255 255 255 / 0.25);
+
+        &:focus-within {
+            border-color: rgb(255 255 255 / 0.7);
+        }
+
+        input {
+            flex: 1;
+            min-width: 0;
+            font-size: 0.8rem;
+            color: white;
+            background: transparent;
+            outline: none;
+            user-select: text;
+
+            &::placeholder {
+                color: rgb(255 255 255 / 0.65);
+            }
+        }
+
+        button {
+            display: grid;
+            place-items: center;
+            width: 1.5rem;
+            height: 1.5rem;
+            border-radius: 50%;
+            cursor: pointer;
+            background: rgb(255 255 255 / 0.3);
+
+            &:hover {
+                background: rgb(255 255 255 / 0.5);
+            }
+        }
+    }
+}

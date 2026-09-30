@@ -7,9 +7,10 @@ import {
   Finder,
   Text,
   Contact,
-
+  Image,
+  Photos,
 } from "./windows";
-import { Navbar, Welcome, Dock ,  Home, } from "#components";
+import { Navbar, Welcome, Dock, Home, Login } from "#components";
 
 gsap.registerPlugin(Draggable);
 
@@ -24,9 +25,12 @@ const App = () => {
       <Safari />
       <Resume />
       <Finder />
-      {/* <Text /> */}
+      <Text />
+      <Image />
+      <Photos />
       <Contact />
       <Home />
+      <Login />
     </main>
   );
 };

@@ -1,6 +1,7 @@
 import { navIcons, navLinks } from "../constants/indax";
 import dayjs from "dayjs";
 import useWindowStore from "../store/window";
+import ThemeMenu from "./ThemeMenu";
 
 const Navbar = () => {
   const { openWindow } = useWindowStore();
@@ -20,14 +21,18 @@ const Navbar = () => {
       </div>
       <div>
         <ul>
-          {navIcons.map(({ id, img }) => (
-            <li key={id}>
-              <img src={img} className="icon-hover" alt={id} />
-            </li>
-          ))}
+          {navIcons.map(({ id, img }) =>
+            img.includes("mode") ? (
+              <ThemeMenu key={id} icon={img} />
+            ) : (
+              <li key={id}>
+                <img src={img} className="icon-hover" alt={id} />
+              </li>
+            ),
+          )}
         </ul>
 
-        <time>{dayjs().format("ddd MMM DD h:hh A")}</time>
+        <time>{dayjs().format("ddd MMM DD h:mm A")}</time>
       </div>
     </nav>
   );

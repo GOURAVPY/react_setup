@@ -24,9 +24,8 @@ const useWindowStore = create(
         const win = state.windows[windowKey];
         if (!win) return;
 
+        // zIndex and data are kept so the window can animate out as it was
         win.isOpen = false;
-        win.zIndex = INITIAL_Z_INDEX;
-        win.data = null;
         win.isMaximized = false;
         win.isMinimized = false;
       }),
@@ -44,7 +43,7 @@ const useWindowStore = create(
         const win = state.windows[windowKey];
         if (!win || !win.isOpen) return;
 
-        win.isMaximized = true;
+        win.isMaximized = !win.isMaximized;
         win.isMinimized = false;
         win.zIndex = state.nextZindex++;
       }),

@@ -6,7 +6,7 @@ import { useGSAP } from "@gsap/react";
 import useWindowStore from "../store/window";
 
 const Dock = () => {
-  const { openWindow, closeWindow, windows } = useWindowStore();
+  const { openWindow, focusWindow, windows } = useWindowStore();
   const Dockref = useRef(null);
 
   useGSAP(() => {
@@ -59,14 +59,27 @@ const Dock = () => {
     };
   }, []);
 
-  const toggleApp = (app) => {
+  const bounceIcon = (button) => {
+    gsap.to(button.querySelector("img"), {
+      y: -18,
+      duration: 0.22,
+      ease: "power2.out",
+      yoyo: true,
+      repeat: 3,
+    });
+  };
+
+  // Like the macOS dock: opens the app, restores it if minimized, or brings
+  // an already open window to the front. Windows close with their red button.
+  const launchApp = (app, button) => {
     if (!app.canOpen) return;
 
     const window = windows[app.id];
 
-    if (window.isOpne) {
-      closeWindow(app.id);
+    if (window.isOpen && !window.isMinimized) {
+      focusWindow(app.id);
     } else {
+      if (!window.isOpen) bounceIcon(button);
       openWindow(app.id);
     }
   };
@@ -81,11 +94,12 @@ const Dock = () => {
               type="button"
               className="dock-icon"
               aria-label={name}
+              data-app={id}
               data-tooltip-id="dock-tooltip"
               data-tooltip-content={name}
               data-tooltip-delay-show={150}
               disabled={!canOpen}
-              onClick={() => toggleApp({ id, canOpen })}
+              onClick={(e) => launchApp({ id, canOpen }, e.currentTarget)}
             >
               {" "}
               <img
@@ -95,6 +109,7 @@ const Dock = () => {
                 className={canOpen ? "" : "opacity-60"}
               />{" "}
             </button>{" "}
+            {windows[id]?.isOpen && <span className="dock-dot" />}
           </div>
         ))}
         <Tooltip id="dock-tooltip" place="top" className="tooltip" />
