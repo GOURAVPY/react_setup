@@ -14,7 +14,8 @@ const DOCK_APPS = DOCK_IDS.map((id) => APPS.find((app) => app.id === id));
 
 // iPhone-style home screen, shown instead of the Mac desktop on phones
 const MobileHome = () => {
-  const { windows, closeWindow } = useWindowStore();
+  const windows = useWindowStore((state) => state.windows);
+  const closeWindow = useWindowStore((state) => state.closeWindow);
   const launch = useLaunchApp();
 
   const [frontApp] = Object.entries(windows)

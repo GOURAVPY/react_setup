@@ -45,9 +45,11 @@ const getDockOffset = (el, windowKey) => {
 
 const WindowWrapper = (Component, windowKey) => {
   const Wrapped = (props) => {
-    const { focusWindow, windows } = useWindowStore();
+    // Only this window's own state, so other windows changing does not
+    // re-render this one
+    const focusWindow = useWindowStore((state) => state.focusWindow);
     const { isOpen, zIndex, isMinimized, isMaximized } =
-      windows[windowKey] ?? {};
+      useWindowStore((state) => state.windows[windowKey]) ?? {};
     const ref = useRef(null);
     const draggable = useRef(null);
     const previous = useRef({ isOpen: false, isMinimized: false });

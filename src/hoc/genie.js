@@ -1,13 +1,14 @@
 // macOS "genie" effect. A browser cannot bend an element, so the window is
-// copied into thin horizontal strips and each strip is squeezed and moved on
-// its own, which together reads as the window being poured into the dock.
-// The strips are slightly oversized and trimmed by one smooth outline, so the
-// edge of the funnel is a clean curve instead of a staircase.
+// copied into horizontal strips and each strip gets a projective (matrix3d)
+// transform that turns it into a trapezoid. Neighbouring strips share their
+// edges, so they tile into one smooth funnel with no steps, which keeps the
+// strip count low. Each frame only changes transforms, so the compositor
+// moves the strips without repainting anything. Strips are only built once
+// they come into view, so a window pouring out of the dock spreads that work
+// over its first frames instead of pausing on the click.
 
-const MIN_STRIP_HEIGHT = 4;
-const MAX_STRIPS = 130;
-const SAMPLES = 32; // points along each side of the outline
-const CORNER_STEPS = 4;
+const STRIP_HEIGHT = 22; // px; fewer strips are cheaper, more are smoother
+const MAX_STRIPS = 32;
 const BEND_END = 0.45; // share of the animation spent bending the sides
 const SLIDE_START = 0.2; // when the window starts sliding down
 
@@ -21,6 +22,26 @@ const copyCanvases = (from, to) => {
   });
 };
 
+// Transform that maps a box of the given size onto the trapezoid whose top
+// edge runs from topLeft to topRight (at y = 0) and whose bottom edge runs
+// from bottomLeft to bottomRight (at y = height). All x values are relative
+// to the box's own left edge, and the transform origin must be 0 0.
+const trapezoid = (
+  width,
+  height,
+  topLeft,
+  topRight,
+  bottomLeft,
+  bottomRight,
+) => {
+  const scaleX = (topRight - topLeft) / width;
+  const ratio = (topRight - topLeft) / (bottomRight - bottomLeft);
+  const perspective = (ratio - 1) / height;
+  const shear = (bottomLeft * ratio - topLeft) / height;
+
+  return `matrix3d(${scaleX.toFixed(5)},0,0,0,${shear.toFixed(5)},${ratio.toFixed(5)},0,${perspective.toFixed(6)},0,0,1,0,${topLeft.toFixed(2)},0,0,1)`;
+};
+
 /**
  * @param el     the window element; must be displayed and unscaled
  * @param target DOMRect of the dock icon the window pours into
@@ -32,11 +53,8 @@ const createGenie = (el, target) => {
   const distance = target.top - rect.top;
   if (distance <= 0 || !rect.width || !rect.height) return null;
 
-  const styles = getComputedStyle(el);
-  const radius = parseFloat(styles.borderTopLeftRadius) || 0;
-
   const stripHeight = Math.max(
-    MIN_STRIP_HEIGHT,
+    STRIP_HEIGHT,
     Math.ceil(rect.height / MAX_STRIPS),
   );
   const count = Math.ceil(rect.height / stripHeight);
@@ -48,142 +66,109 @@ const createGenie = (el, target) => {
     inset: "0",
     overflow: "hidden",
     pointerEvents: "none",
-    zIndex: styles.zIndex,
+    zIndex: getComputedStyle(el).zIndex,
   });
 
-  const strips = Array.from({ length: count }, (_, i) => {
+  document.body.appendChild(layer);
+
+  // One copy of the window, taken now while it is still shown, that each
+  // strip is cloned from later. The window's own rounded corners are kept:
+  // the first strip shows the top ones and the last strip the bottom ones.
+  const template = el.cloneNode(true);
+  Object.assign(template.style, {
+    position: "absolute",
+    left: "0",
+    right: "auto",
+    width: `${rect.width}px`,
+    height: `${rect.height}px`,
+    maxWidth: "none",
+    margin: "0",
+    transform: "none",
+    translate: "none",
+    opacity: "1",
+    display: "block",
+    boxShadow: "none",
+    filter: "none",
+  });
+  template.querySelectorAll("img").forEach((img) => {
+    img.decoding = "sync";
+    img.loading = "eager";
+  });
+
+  const strips = new Array(count).fill(null);
+
+  const createStrip = (i) => {
     const strip = document.createElement("div");
     Object.assign(strip.style, {
       position: "absolute",
       left: `${rect.left}px`,
       top: `${rect.top + i * stripHeight}px`,
       width: `${rect.width}px`,
-      // double height: each strip also shows the rows of the one below it,
-      // which then paints over them, so the soft edges never show a gap
-      height: `${stripHeight * 2}px`,
+      // one extra row, painted over by the next strip, so no seam shows
+      height: `${stripHeight + 1}px`,
       overflow: "hidden",
       transformOrigin: "0 0",
       willChange: "transform",
       contain: "strict",
     });
 
-    const copy = el.cloneNode(true);
-    Object.assign(copy.style, {
-      position: "absolute",
-      top: `${-i * stripHeight}px`,
-      left: "0",
-      right: "auto",
-      width: `${rect.width}px`,
-      height: `${rect.height}px`,
-      maxWidth: "none",
-      margin: "0",
-      transform: "none",
-      translate: "none",
-      opacity: "1",
-      visibility: "visible",
-      display: "block",
-      boxShadow: "none",
-      filter: "none",
-      borderRadius: "0",
-    });
+    const copy = template.cloneNode(true);
+    copy.style.top = `${-i * stripHeight}px`;
     copyCanvases(el, copy);
-    copy.querySelectorAll("img").forEach((img) => {
-      img.decoding = "sync";
-      img.loading = "eager";
-    });
 
     strip.appendChild(copy);
-    layer.appendChild(strip);
+    // keep document order, so each strip paints over the one above it
+    const next = strips.slice(i + 1).find(Boolean) ?? null;
+    layer.insertBefore(strip, next);
+    strips[i] = strip;
     return strip;
-  });
-
-  document.body.appendChild(layer);
+  };
 
   const render = (progress) => {
     const bend = easeInOut(clamp(progress / BEND_END));
     const slide = clamp((progress - SLIDE_START) / (1 - SLIDE_START));
-    const drop = Math.round(slide * slide * distance);
+    const drop = slide * slide * distance;
 
-    // left and right edge of the funnel at a given height on screen
+    // left and right edge of the funnel at a given height on screen,
+    // relative to the window's left edge
     const edges = (y) => {
       const pull = bend * easeInOut(clamp((y - rect.top) / distance));
       return [
-        rect.left + (target.left - rect.left) * pull,
-        rect.right + (target.right - rect.right) * pull,
+        (target.left - rect.left) * pull,
+        rect.width + (target.right - rect.right) * pull,
       ];
     };
 
-    const top = rect.top + drop;
-    // Rows are cut off once they are inside the dock. A window that starts
-    // out lower than the dock is squeezed into it first, so its bottom does
-    // not vanish the moment the animation starts.
-    const bottom =
-      bend >= 1
-        ? Math.min(rect.bottom + drop, target.top + target.height / 2)
-        : rect.bottom + drop;
+    // Once the sides have closed in, the rows inside the dock are dropped. A
+    // window that starts out lower than the dock is squeezed into it first,
+    // so its bottom does not vanish the moment the animation starts.
+    const cutoff = bend >= 1 ? target.top + target.height / 2 : Infinity;
 
-    if (bottom <= top) {
-      layer.style.visibility = "hidden";
-      return;
-    }
-    layer.style.visibility = "visible";
+    let [left, right] = edges(rect.top + drop);
 
-    strips.forEach((strip, i) => {
-      const y = rect.top + i * stripHeight + drop;
+    for (let i = 0; i < count; i++) {
+      const top = rect.top + i * stripHeight + drop;
 
-      if (y >= bottom) {
-        strip.style.visibility = "hidden";
-        return;
+      // display rather than visibility: the copy inside would stay visible
+      // through a hidden parent, and a strip only ever changes state once
+      if (top >= cutoff) {
+        if (strips[i]) strips[i].style.display = "none";
+        continue;
       }
 
-      // wide enough to cover the outline over the strip's whole height
-      const [leftA, rightA] = edges(y);
-      const [leftB, rightB] = edges(y + stripHeight * 2);
-      const left = Math.min(leftA, leftB);
-      const right = Math.max(rightA, rightB);
-
-      strip.style.visibility = "visible";
-      strip.style.transform = `translate(${left - rect.left}px, ${drop}px) scaleX(${(right - left) / rect.width})`;
-    });
-
-    // Smooth outline that trims the strips
-    const left = [];
-    const right = [];
-    const corner = Math.min(radius, (bottom - top) / 2);
-
-    const [topLeft, topRight] = edges(top);
-    for (let i = 0; i <= CORNER_STEPS; i++) {
-      const angle = (Math.PI / 2) * (i / CORNER_STEPS);
-      const dx = corner * (1 - Math.sin(angle));
-      const y = top + corner * (1 - Math.cos(angle));
-      left.push([topLeft + dx, y]);
-      right.push([topRight - dx, y]);
+      const strip = strips[i] ?? createStrip(i);
+      const [nextLeft, nextRight] = edges(top + stripHeight);
+      strip.style.display = "";
+      strip.style.transform = `translateY(${drop.toFixed(2)}px) ${trapezoid(
+        rect.width,
+        stripHeight,
+        left,
+        right,
+        nextLeft,
+        nextRight,
+      )}`;
+      [left, right] = [nextLeft, nextRight];
     }
-
-    // the bottom corners straighten out as the funnel forms
-    const bottomCorner = corner * (1 - bend);
-    const sideEnd = bottom - bottomCorner;
-
-    for (let i = 1; i <= SAMPLES; i++) {
-      const y = top + corner + ((sideEnd - top - corner) * i) / SAMPLES;
-      const [l, r] = edges(y);
-      left.push([l, y]);
-      right.push([r, y]);
-    }
-
-    const [bottomLeft, bottomRight] = edges(bottom);
-    for (let i = 1; i <= CORNER_STEPS && bottomCorner > 0; i++) {
-      const angle = (Math.PI / 2) * (i / CORNER_STEPS);
-      const dx = bottomCorner * (1 - Math.cos(angle));
-      const y = sideEnd + bottomCorner * Math.sin(angle);
-      left.push([bottomLeft + dx, y]);
-      right.push([bottomRight - dx, y]);
-    }
-
-    const outline = [...right, ...left.reverse()]
-      .map(([x, y]) => `${x.toFixed(1)}px ${y.toFixed(1)}px`)
-      .join(",");
-    layer.style.clipPath = `polygon(${outline})`;
   };
 
   return { render, destroy: () => layer.remove() };

@@ -19,6 +19,37 @@ const ASSETS = [
   "/images/folder.png",
 ];
 
+// Pictures inside the windows. Fetched and decoded once the desktop is up,
+// so the first time a window opens its images are already there instead of
+// popping in while it pours out of the dock.
+const WINDOW_IMAGES = [
+  "/images/folder.png",
+  "/images/image.png",
+  "/images/txt.png",
+  "/images/pdf.png",
+  "/images/plain.png",
+  "/images/adrian.jpg",
+  "/images/blog1.png",
+  "/images/blog2.png",
+  "/images/blog3.png",
+  "/images/gal1.png",
+  "/images/gal2.png",
+  "/images/gal3.png",
+  "/images/gal4.png",
+];
+const warmed = []; // keeps the decoded images alive
+
+const warmUp = () => {
+  setTimeout(() => {
+    WINDOW_IMAGES.forEach((src) => {
+      const image = new Image();
+      image.src = src;
+      image.decode().catch(() => {});
+      warmed.push(image);
+    });
+  }, 1000);
+};
+
 const preload = (src) =>
   new Promise((resolve) => {
     const image = new Image();
@@ -32,6 +63,7 @@ const runBootScreen = () => {
 
   if (document.documentElement.classList.contains("booted")) {
     screen.remove();
+    warmUp();
     return;
   }
 
@@ -52,6 +84,7 @@ const runBootScreen = () => {
     setTimeout(() => {
       screen.remove();
       window.dispatchEvent(new Event("boot:done"));
+      warmUp();
     }, FADE_DURATION);
   };
 

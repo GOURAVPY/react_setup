@@ -7,7 +7,7 @@ import useWindowStore from "../store/window";
 import useLaunchApp from "../store/launch";
 
 const Dock = () => {
-  const { windows } = useWindowStore();
+  const windows = useWindowStore((state) => state.windows);
   const launch = useLaunchApp();
   const Dockref = useRef(null);
 

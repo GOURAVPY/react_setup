@@ -20,7 +20,7 @@ const searchIndex = flatten(Object.values(locations));
 const stopDrag = (e) => e.stopPropagation();
 
 const Finder = () => {
-  const { openWindow } = useWindowStore();
+  const openWindow = useWindowStore((state) => state.openWindow);
   const [isSearching, setIsSearching] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -34,7 +34,10 @@ const Finder = () => {
     setQuery("");
   };
 
-  const { activeLocation, setActiveLocation } = useLocationStore();
+  const activeLocation = useLocationStore((state) => state.activeLocation);
+  const setActiveLocation = useLocationStore(
+    (state) => state.setActiveLocation,
+  );
 
   const openItem = (item) => {
     if (item.fileType === "pdf") return openWindow("resume");

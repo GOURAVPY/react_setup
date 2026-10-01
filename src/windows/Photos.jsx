@@ -5,7 +5,7 @@ import useWindowStore from "../store/window";
 import { photosLinks, gallery } from "../constants/indax";
 
 const Photos = () => {
-  const { openWindow } = useWindowStore();
+  const openWindow = useWindowStore((state) => state.openWindow);
 
   return (
     <>
