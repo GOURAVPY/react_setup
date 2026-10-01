@@ -207,11 +207,77 @@ body {
         }
 
         .techstack {
-            @apply text-sm font-roboto p-5;
+            @apply text-sm font-roboto p-5 max-h-[65vh] overflow-y-auto cursor-text;
 
             .cursor {
                 @apply inline-block w-2 h-4 bg-gray-700 align-text-bottom;
                 animation: cursor-blink 1s steps(1) infinite;
+            }
+
+            .hint {
+                @apply mt-5 text-gray-400;
+
+                b {
+                    @apply font-semibold text-gray-700;
+                }
+            }
+
+            .entry {
+                @apply mt-3;
+
+                > p:first-child {
+                    @apply break-all;
+                }
+            }
+
+            /* command output prints line by line */
+            .out {
+                @apply whitespace-pre-wrap wrap-anywhere;
+                animation: terminal-line 0.18s ease-out both;
+
+                &.muted {
+                    @apply text-gray-400;
+                }
+
+                &.success {
+                    @apply text-[#00A154];
+                }
+
+                &.error {
+                    @apply text-[#e5484d];
+                }
+
+                &.accent {
+                    @apply text-blue-600 font-semibold;
+                }
+
+                .label {
+                    @apply inline-block min-w-36 pe-3 text-[#00A154] font-semibold align-top;
+                }
+
+                a {
+                    @apply text-blue-600 hover:underline;
+                }
+            }
+
+            .next-prompt {
+                @apply mt-3;
+
+                label {
+                    @apply relative block break-all;
+                }
+
+                /* the real input sits invisibly over the line; what you type
+                   is drawn by the spans, with the block cursor after it */
+                input {
+                    @apply absolute inset-0 w-full opacity-0 cursor-text;
+                    font-size: 16px; /* below 16px, phones zoom in on focus */
+                }
+
+                &:not(:focus-within) .cursor {
+                    @apply bg-transparent outline outline-gray-500;
+                    animation: none;
+                }
             }
 
             .label {
@@ -632,6 +698,19 @@ body {
                 }
             }
         }
+    }
+}
+
+@keyframes terminal-line {
+    from {
+        opacity: 0;
+        transform: translateY(3px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #terminal .out {
+        animation: none;
     }
 }
 

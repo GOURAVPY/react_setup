@@ -222,13 +222,20 @@ const Terminal = () => {
               <span>{PROMPT}</span>
               {typed}
             </p>
-            {lines.map(({ text, tone }, i) => (
+            {lines.map(({ text, tone, label, href }, i) => (
               <p
                 key={i}
                 className={clsx("out", tone)}
                 style={{ animationDelay: `${i * 35}ms` }}
               >
-                {text}
+                {label && <span className="label">{label}</span>}
+                {href ? (
+                  <a href={href} target="_blank" rel="noopener noreferrer">
+                    {text}
+                  </a>
+                ) : (
+                  text
+                )}
               </p>
             ))}
           </div>

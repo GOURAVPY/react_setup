@@ -3,7 +3,10 @@ import { locations, socials, techStack } from "../constants/indax";
 
 // Commands the Skills terminal understands. Each command's `run` gets the
 // words typed after it and a few actions from the terminal, and returns the
-// lines to print. A line is { text, tone }, where tone picks the colour.
+// lines to print. A line is { text, tone, label, href }:
+//   tone   colours the line: "muted", "success", "error" or "accent"
+//   label  an aligned green column in front of the text
+//   href   turns the text into a link
 
 const line = (text, tone) => ({ text, tone });
 
@@ -33,14 +36,10 @@ export const COMMANDS = {
       line("Available commands:", "muted"),
       ...Object.entries(COMMANDS)
         .filter(([, command]) => !command.hidden)
-        .map(([name, { usage, description }]) =>
-          line(
-            <>
-              <span className="command-name">{usage ?? name}</span>
-              {description}
-            </>,
-          ),
-        ),
+        .map(([name, { usage, description }]) => ({
+          label: usage ?? name,
+          text: description,
+        })),
       line("Tip: Tab completes a command, ↑ and ↓ go through history.", "muted"),
     ],
   },
@@ -58,15 +57,10 @@ export const COMMANDS = {
   skills: {
     description: "My tech stack",
     run: () =>
-      techStack.map(({ category, items }) =>
-        line(
-          <>
-            <span className="ok">✓</span>
-            <span className="category">{category}</span>
-            {items.join(", ")}
-          </>,
-        ),
-      ),
+      techStack.map(({ category, items }) => ({
+        label: `✓ ${category}`,
+        text: items.join(", "),
+      })),
   },
 
   projects: {
@@ -94,16 +88,11 @@ export const COMMANDS = {
   contact: {
     description: "Where to find me",
     run: () =>
-      socials.map(({ text, link }) =>
-        line(
-          <>
-            <span className="category">{text}</span>
-            <a href={link} target="_blank" rel="noopener noreferrer">
-              {link.replace(/^https?:\/\/(www\.)?/, "")}
-            </a>
-          </>,
-        ),
-      ),
+      socials.map(({ text, link }) => ({
+        label: text,
+        text: link.replace(/^https?:\/\/(www\.)?/, ""),
+        href: link,
+      })),
   },
 
   open: {
@@ -117,7 +106,9 @@ export const COMMANDS = {
         return [line("You're already here.", "muted")];
       }
       if (!APPS[key]) {
-        return [line(`open: no app called "${name}". Try: ${APP_NAMES}`, "error")];
+        return [
+          line(`open: no app called "${name}". Try: ${APP_NAMES}`, "error"),
+        ];
       }
 
       // after the line has printed, so the reply shows before the app opens
@@ -174,7 +165,10 @@ export const COMMANDS = {
   sudo: {
     hidden: true,
     run: () => [
-      line("guest is not in the sudoers file. This incident will be reported.", "error"),
+      line(
+        "guest is not in the sudoers file. This incident will be reported.",
+        "error",
+      ),
     ],
   },
 };
