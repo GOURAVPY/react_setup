@@ -58,11 +58,7 @@ const Terminal = () => {
       gsap
         .timeline({
           delay: 0.6,
-          onComplete: () => {
-            setReady(true);
-            // on a phone this would pop the keyboard up uninvited
-            if (!isMobile()) inputRef.current?.focus({ preventScroll: true });
-          },
+          onComplete: () => setReady(true),
         })
         .to(typed, {
           length: COMMAND.length,
@@ -82,6 +78,12 @@ const Terminal = () => {
     },
     { dependencies: [isOpen], scope: container, revertOnUpdate: true },
   );
+
+  // Hand over the prompt once it is enabled. Not on a phone, where focusing
+  // would pop the keyboard up uninvited.
+  useEffect(() => {
+    if (ready && !isMobile()) inputRef.current?.focus({ preventScroll: true });
+  }, [ready]);
 
   // keep the prompt in view as output grows
   useLayoutEffect(() => {
