@@ -12,17 +12,29 @@ export const ICON_STYLES = [
   { id: "minimal", label: "Minimal" },
 ];
 
+// How windows leave and come back (see src/hoc/windowEffects.js)
+export const MINIMIZE_EFFECTS = [
+  { id: "genie", label: "Genie effect" },
+  { id: "scale", label: "Scale effect" },
+  { id: "fade", label: "Fade effect" },
+  { id: "flip", label: "Flip effect" },
+  { id: "vortex", label: "Vortex effect" },
+  { id: "drop", label: "Drop effect" },
+];
+
 export const DOCK_DEFAULTS = {
-  minimizeEffect: "genie", // "genie" | "scale"
+  minimizeEffect: "genie",
   autohide: false,
   indicators: true, // dot under apps that are open
   iconStyle: "macos",
 };
 
+const CHOICES = { iconStyle: ICON_STYLES, minimizeEffect: MINIMIZE_EFFECTS };
+
 const isValid = (key, value) =>
   key in DOCK_DEFAULTS &&
   typeof value === typeof DOCK_DEFAULTS[key] &&
-  (key !== "iconStyle" || ICON_STYLES.some(({ id }) => id === value));
+  (!CHOICES[key] || CHOICES[key].some(({ id }) => id === value));
 
 const readStored = () => {
   try {

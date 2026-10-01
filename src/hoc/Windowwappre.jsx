@@ -5,6 +5,7 @@ import { Draggable } from "gsap/Draggable";
 import gsap from "gsap";
 import clsx from "clsx";
 import createGenie from "./genie";
+import { RESET_EFFECTS, WINDOW_EFFECTS } from "./windowEffects";
 import { isMobile, mobileQuery } from "../utils/device";
 import useDockStore from "../store/dock";
 
@@ -123,9 +124,8 @@ const WindowWrapper = (Component, windowKey) => {
       };
 
       // Pours the window into its dock icon (or back out of it). Returns
-      // false when there is no dock to pour into, e.g. on small screens.
-      // Returns false on phones, when the Scale effect is chosen in Settings,
-      // or when the window sits where it cannot pour into the dock.
+      // false on phones, when another effect is chosen in Settings, or when
+      // the window sits where it cannot pour into the dock.
       const playGenie = (from, to, onComplete) => {
         const { minimizeEffect } = useDockStore.getState();
         if (isMobile() || minimizeEffect !== "genie") return false;
@@ -150,6 +150,29 @@ const WindowWrapper = (Component, windowKey) => {
 
         genie.current = { tween, effect };
         return true;
+      };
+
+      // Plays the minimize effect chosen in Settings, forwards (leaving) or
+      // backwards (arriving). The window must be shown at full size. A
+      // genie that cannot play here falls back to the scale effect.
+      const playEffect = (reverse, onComplete) => {
+        const { minimizeEffect } = useDockStore.getState();
+        const build = WINDOW_EFFECTS[minimizeEffect] ?? WINDOW_EFFECTS.scale;
+        const timeline = build({
+          el,
+          from: getPosition(el),
+          offset: getDockOffset(el, windowKey),
+          rect: el.getBoundingClientRect(),
+        });
+
+        if (onComplete) {
+          timeline.eventCallback(
+            reverse ? "onReverseComplete" : "onComplete",
+            onComplete,
+          );
+        }
+        if (reverse) timeline.progress(1).reverse();
+        else timeline.play();
       };
 
       const stopGenie = () => {
@@ -193,47 +216,28 @@ const WindowWrapper = (Component, windowKey) => {
         if (was.isMinimized) return;
         gsap.killTweensOf(el);
         el.style.display = "block";
-        gsap.set(el, { scale: 1, opacity: 1 });
-        const from = getPosition(el);
-        minimizedFrom.current = from;
+        gsap.set(el, RESET_EFFECTS);
+        minimizedFrom.current = getPosition(el);
 
-        if (playGenie(0, 1, hide)) return;
-
-        // No dock to pour into: shrink the window away instead
-        const offset = getDockOffset(el, windowKey);
-        gsap
-          .timeline({ defaults: { duration: 0.45 }, onComplete: hide })
-          .to(el, { x: from.x + offset.x, scaleX: DOCK_SCALE, ease: "power1.in" }, 0)
-          .to(el, { y: from.y + offset.y, scaleY: DOCK_SCALE, ease: "power3.in" }, 0)
-          .to(el, { opacity: 0, duration: 0.15, ease: "none" }, 0.3);
+        if (!playGenie(0, 1, hide)) playEffect(false, hide);
         return;
       }
 
       gsap.killTweensOf(el);
       el.style.display = "block";
 
+      // Restoring returns the window to where it was; opening puts it in its
+      // usual place. Either way it is set there at full size first, so the
+      // effect can measure it, and then the effect plays backwards.
       if (was.isOpen && was.isMinimized) {
-        const to = minimizedFrom.current;
-        const wasShrunk = gsap.getProperty(el, "opacity") < 1;
-        if (!wasShrunk && playGenie(1, 0)) return;
-
-        gsap
-          .timeline({ defaults: { duration: 0.45 } })
-          .to(el, { opacity: 1, duration: 0.15, ease: "none" }, 0)
-          .to(el, { y: to.y, scaleY: 1, ease: "power3.out" }, 0)
-          .to(el, { x: to.x, scaleX: 1, ease: "power1.out" }, 0);
+        gsap.set(el, { ...RESET_EFFECTS, ...minimizedFrom.current });
       } else if (!was.isOpen) {
-        gsap.set(el, { x: 0, y: 0, scale: 1, opacity: 1 });
-        if (playGenie(1, 0)) return;
-
-        // No dock to pour out of: grow the window into place instead
-        const offset = getDockOffset(el, windowKey);
-        gsap.fromTo(
-          el,
-          { ...offset, scale: DOCK_SCALE, opacity: 0 },
-          { x: 0, y: 0, scale: 1, opacity: 1, duration: 0.45, ease: "power3.out" }
-        );
+        gsap.set(el, { ...RESET_EFFECTS, x: 0, y: 0 });
+      } else {
+        return;
       }
+
+      if (!playGenie(1, 0)) playEffect(true);
     }, [isOpen, isMinimized]);
 
     return (

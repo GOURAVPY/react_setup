@@ -12,7 +12,7 @@ import { Windowcontrols } from "../components";
 import WindowWrapper from "../hoc/Windowwappre";
 import useThemeStore, { changeTheme } from "../store/theme";
 import useWallpaperStore, { CUSTOM_ID, WALLPAPERS } from "../store/wallpaper";
-import useDockStore, { ICON_STYLES } from "../store/dock";
+import useDockStore, { ICON_STYLES, MINIMIZE_EFFECTS } from "../store/dock";
 import AppIcon from "../components/AppIcon";
 
 const THEME_OPTIONS = [
@@ -209,8 +209,11 @@ const DockPane = () => {
             value={minimizeEffect}
             onChange={(e) => setDock("minimizeEffect", e.target.value)}
           >
-            <option value="genie">Genie effect</option>
-            <option value="scale">Scale effect</option>
+            {MINIMIZE_EFFECTS.map(({ id, label }) => (
+              <option key={id} value={id}>
+                {label}
+              </option>
+            ))}
           </select>
         </label>
 
