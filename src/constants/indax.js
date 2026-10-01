@@ -67,6 +67,12 @@ const dockApps = [
     canOpen: true,
   },
   {
+    id: "arcade",
+    name: "Arcade",
+    icon: "arcade.svg",
+    canOpen: true,
+  },
+  {
     id: "settings",
     name: "Settings",
     icon: "settings.svg",
@@ -531,6 +537,13 @@ const WINDOW_CONFIG = {
     data: null,
   },
   terminal: {
+    isOpen: false,
+    isMaximized: false,
+    isMinimized: false,
+    zIndex: INITIAL_Z_INDEX,
+    data: null,
+  },
+  arcade: {
     isOpen: false,
     isMaximized: false,
     isMinimized: false,

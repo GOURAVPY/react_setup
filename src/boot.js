@@ -16,6 +16,7 @@ const ASSETS = [
   "/images/contact.png",
   "/images/terminal.png",
   "/images/trash.png",
+  "/images/arcade.svg",
   "/images/folder.png",
 ];
 

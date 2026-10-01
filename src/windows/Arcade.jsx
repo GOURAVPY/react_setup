@@ -13,18 +13,21 @@ const Arcade = () => {
   const isMinimized = useWindowStore((state) => state.windows.arcade.isMinimized);
   const frame = useRef(null);
 
-  // a game in progress pauses when the window goes to the dock
-  useEffect(() => {
-    if (isMinimized) {
-      frame.current?.contentWindow?.postMessage("pause", window.location.origin);
-    }
-  }, [isMinimized]);
-
   // keys go straight to the game once it has loaded. Not on a phone, where
   // the game has its own on-screen buttons.
   const focusGame = () => {
     if (!isMobile()) frame.current?.contentWindow?.focus();
   };
+
+  // the game pauses while the window is in the dock, and stays paused
+  // until the player resumes it
+  useEffect(() => {
+    frame.current?.contentWindow?.postMessage(
+      isMinimized ? "hidden" : "visible",
+      window.location.origin,
+    );
+    if (!isMinimized) focusGame();
+  }, [isMinimized]);
 
   return (
     <>

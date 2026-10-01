@@ -580,6 +580,28 @@ body {
         }
     }
 
+    #arcade {
+        @apply absolute top-14 left-[30%] shadow-2xl drop-shadow-2xl rounded-xl overflow-hidden;
+        background: #000;
+
+        #window-header {
+            background: #17151f;
+            border-color: rgb(255 255 255 / 0.06);
+            color: #8b86a3;
+
+            h2 {
+                @apply font-bold text-sm text-center flex-1 pr-14;
+            }
+        }
+
+        iframe {
+            @apply block border-0;
+            width: 440px;
+            height: min(590px, calc(100vh - 7.5rem));
+            background: #000;
+        }
+    }
+
     #settings {
         @apply w-2xl absolute top-24 left-3/12 bg-white shadow-2xl drop-shadow-2xl rounded-xl overflow-hidden;
 
@@ -1344,6 +1366,17 @@ section.window-maximized {
 
     #imgfile .preview {
         max-height: none;
+    }
+
+    #arcade {
+        #window-header h2 {
+            padding: 0;
+        }
+
+        iframe {
+            width: 100%;
+            height: calc(100dvh - 7.5rem);
+        }
     }
 
     #settings {

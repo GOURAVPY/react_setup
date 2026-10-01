@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="plate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4c1d95"/>
+      <stop offset="1" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <radialGradient id="ball" cx="0.35" cy="0.3" r="0.75">
+      <stop offset="0" stop-color="#fca5a5"/>
+      <stop offset="0.45" stop-color="#ef4444"/>
+      <stop offset="1" stop-color="#991b1b"/>
+    </radialGradient>
+    <linearGradient id="base" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#facc15"/>
+      <stop offset="1" stop-color="#ca8a04"/>
+    </linearGradient>
+  </defs>
+  <rect x="11" y="11" width="98" height="98" rx="23" fill="url(#plate)"/>
+  <rect x="11.75" y="11.75" width="96.5" height="96.5" rx="22.25" fill="none" stroke="#fff" stroke-opacity=".25" stroke-width="1.5"/>
+  <!-- joystick: base, stick and ball -->
+  <ellipse cx="60" cy="84" rx="30" ry="9" fill="#0f0a2e" opacity=".55"/>
+  <path d="M30 78 h60 v4 a30 9 0 0 1 -60 0 z" fill="#a16207"/>
+  <ellipse cx="60" cy="78" rx="30" ry="9" fill="url(#base)"/>
+  <rect x="56" y="44" width="8" height="34" rx="4" fill="#d1d5db"/>
+  <circle cx="60" cy="40" r="15" fill="url(#ball)"/>
+  <!-- two arcade buttons -->
+  <circle cx="38" cy="77" r="4" fill="#22d3ee"/>
+  <circle cx="82" cy="77" r="4" fill="#4ade80"/>
+</svg>

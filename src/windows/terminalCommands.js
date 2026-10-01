@@ -32,9 +32,13 @@ const APPS = {
   resume: "resume",
   settings: "settings",
   trash: "trash",
+  arcade: "arcade",
+  game: "arcade",
+  pacman: "arcade",
 };
 
-const APP_NAMES = "portfolio, articles, gallery, contact, resume, settings";
+const APP_NAMES =
+  "portfolio, articles, gallery, contact, resume, arcade, settings";
 
 const THEMES = ["light", "dark", "system"];
 

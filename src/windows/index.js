@@ -7,5 +7,6 @@ import Contact from "./Contact";
 import Image from "./Image";
 import Photos from "./Photos";
 import Settings from "./Settings";
+import Arcade from "./Arcade";
 
-export { Terminal, Safari, Resume, Finder, Text, Contact, Image, Photos, Settings };
+export { Terminal, Safari, Resume, Finder, Text, Contact, Image, Photos, Settings, Arcade };

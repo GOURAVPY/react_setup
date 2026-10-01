@@ -121,6 +121,28 @@ const createGenie = (el, target, side = "bottom") => {
     img.loading = "eager";
   });
 
+  // A frame (the Arcade game) would load a whole new copy of its page in
+  // every strip, so the strips show a still picture of it instead
+  const frames = el.querySelectorAll("iframe");
+  template.querySelectorAll("iframe").forEach((copy, i) => {
+    const picture = document.createElement("img");
+    const box = frames[i].getBoundingClientRect();
+    Object.assign(picture.style, {
+      display: "block",
+      width: `${box.width}px`,
+      height: `${box.height}px`,
+      objectFit: "contain",
+      background: "#000",
+    });
+    try {
+      const canvas = frames[i].contentDocument?.querySelector("canvas");
+      if (canvas) picture.src = canvas.toDataURL();
+    } catch {
+      // not readable (e.g. still loading): the black box will do
+    }
+    copy.replaceWith(picture);
+  });
+
   const strips = new Array(count).fill(null);
 
   const createStrip = (i) => {
