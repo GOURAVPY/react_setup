@@ -251,8 +251,13 @@ body {
                     @apply text-blue-600 font-semibold;
                 }
 
-                .label {
-                    @apply inline-block min-w-36 pe-3 text-[#00A154] font-semibold align-top;
+                /* labelled lines keep their text in its own column when it wraps */
+                &:has(> .out-label) {
+                    @apply flex;
+                }
+
+                .out-label {
+                    @apply flex-none w-36 max-sm:w-28 pe-3 text-[#00A154] font-semibold;
                 }
 
                 a {

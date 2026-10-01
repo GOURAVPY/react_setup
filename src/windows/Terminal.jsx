@@ -230,7 +230,7 @@ const Terminal = () => {
                 className={clsx("out", tone)}
                 style={{ animationDelay: `${i * 35}ms` }}
               >
-                {label && <span className="label">{label}</span>}
+                {label && <span className="out-label">{label}</span>}
                 {href ? (
                   <a href={href} target="_blank" rel="noopener noreferrer">
                     {text}
