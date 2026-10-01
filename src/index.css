@@ -467,7 +467,7 @@ body {
     }
 
     #finder {
-        @apply absolute w-3xl left-40 top-20 shadow-2xl drop-shadow-2xl overflow-hidden rounded-xl;
+        @apply absolute w-3xl left-40 top-20 bg-white shadow-2xl drop-shadow-2xl overflow-hidden rounded-xl;
 
         .sidebar {
             @apply w-48 bg-gray-50 border-r border-gray-200 flex flex-col p-5 space-y-3;
@@ -866,18 +866,73 @@ body {
     }
 }
 
-/* Fills the screen below the menu bar; unlayered so it wins over the per-window rules above */
+/* Fills the screen below the menu bar; unlayered so it wins over the per-window
+   rules above. Each window keeps its own background (the terminal stays dark).
+   The window becomes a column: the title bar at the top and the content
+   stretching to fill the rest, scrolling if it is taller than the screen.
+   display needs !important to beat the inline "block" the window code sets. */
 section.window-maximized {
     top: var(--navbar-height, 2.5rem);
     left: 0;
     right: auto;
     width: 100dvw;
     max-width: none;
-    height: calc(100dvh - var(--navbar-height, 2.5rem));
+    /* stops above the dock, like a zoomed window on a Mac */
+    height: calc(100dvh - var(--navbar-height, 2.5rem) - 7.5rem);
     translate: none;
     border-radius: 0;
-    background: var(--color-white);
-    overflow: auto;
+    display: flex !important;
+    flex-direction: column;
+    overflow: hidden;
+
+    > #window-header {
+        flex: none;
+    }
+
+    > :not(#window-header) {
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: none;
+        overflow: auto;
+    }
+
+    /* panels that were capped to fit a small window can use the space */
+    .pane,
+    .results {
+        max-height: none;
+    }
+}
+
+/* with the dock hidden away, a maximized window uses the full height */
+body:has(#dock.autohide) section.window-maximized {
+    height: calc(100dvh - var(--navbar-height, 2.5rem));
+}
+
+/* maximized: the game fills the window (it scales itself to fit) */
+#arcade.window-maximized iframe {
+    width: 100%;
+    height: auto;
+}
+
+/* maximized: contact card centred in the window rather than in a corner */
+#contact.window-maximized > :not(#window-header) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+
+    ul {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+}
+
+/* maximized: the résumé page in the middle */
+#resume.window-maximized .react-pdf__Document {
+    display: flex;
+    justify-content: center;
+    padding: 1.5rem 0;
 }
 
 /* The real window while its genie copy is on screen. Children are forced

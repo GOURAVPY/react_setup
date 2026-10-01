@@ -15,8 +15,11 @@ body,html{
     display: none;
 }.canvas{
     image-rendering: pixelated;
-    max-height: 95vh;
+    /* as tall as the page allows, keeping its shape */
+    height: 95vh;
+    width: auto;
     max-width: 100vw;
+    object-fit: contain;
     touch-action: none;
 }
 .controls{
@@ -25,7 +28,7 @@ body,html{
 /* on touch screens show the buttons under the game */
 @media (pointer: coarse){
     .canvas{
-        max-height: 68vh;
+        height: 68vh;
     }
     .controls{
         display: grid;
