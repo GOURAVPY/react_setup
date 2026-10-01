@@ -1,0 +1,46 @@
+*{
+    margin: 0;
+    padding: 0;
+}
+body,html{
+    height: 100vh;
+    width: 100vw;
+    background-color: black;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+.canvaimg{
+    display: none;
+}.canvas{
+    image-rendering: pixelated;
+    max-height: 95vh;
+    max-width: 100vw;
+    touch-action: none;
+}
+.controls{
+    display: none;
+}
+/* on touch screens show the buttons under the game */
+@media (pointer: coarse){
+    .canvas{
+        max-height: 68vh;
+    }
+    .controls{
+        display: grid;
+        grid-template-columns: repeat(3, 64px);
+        gap: 8px;
+        margin-top: 10px;
+    }
+    .controls button{
+        height: 56px;
+        font-size: 22px;
+        font-weight: bold;
+        color: yellow;
+        background: #111;
+        border: 2px solid #2121ff;
+        border-radius: 12px;
+        touch-action: manipulation;
+    }
+}
