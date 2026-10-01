@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { flushSync } from "react-dom";
+import { playSound } from "./sound";
 
 const STORAGE_KEY = "theme";
 export const THEMES = ["light", "dark", "system"];
@@ -88,6 +89,7 @@ export const changeTheme = (theme, origin, alsoUpdate) => {
 
   const looksTheSame =
     document.documentElement.dataset.theme === resolve(theme);
+  if (!looksTheSame) playSound("pop");
   if (looksTheSame || !origin) return update();
 
   const { left, top, width, height } = origin.getBoundingClientRect();

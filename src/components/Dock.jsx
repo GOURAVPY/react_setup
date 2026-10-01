@@ -16,7 +16,15 @@ const HIDE_DELAY = 400; // ms before an auto-hiding dock slides away
 const Dock = () => {
   const windows = useWindowStore((state) => state.windows);
   const launch = useLaunchApp();
-  const autohide = useDockStore((state) => state.autohide);
+  // The dock slides out of the way when auto-hide is on, and also while a
+  // window fills the screen, coming back when the pointer reaches the bottom
+  const autohideSetting = useDockStore((state) => state.autohide);
+  const fullScreen = useWindowStore((state) =>
+    Object.values(state.windows).some(
+      (window) => window.isOpen && !window.isMinimized && window.isMaximized,
+    ),
+  );
+  const autohide = autohideSetting || fullScreen;
   const indicators = useDockStore((state) => state.indicators);
   const Dockref = useRef(null);
   const hideTimer = useRef(null);

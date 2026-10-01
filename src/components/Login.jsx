@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import dayjs from "dayjs";
+import { playSound } from "../store/sound";
 
 const STORAGE_KEY = "loggedIn";
 const USER_NAME = "Gourav";
@@ -43,6 +44,7 @@ const Login = () => {
 
   const logIn = (e) => {
     e.preventDefault();
+    playSound("unlock");
     try {
       sessionStorage.setItem(STORAGE_KEY, "1");
     } catch {

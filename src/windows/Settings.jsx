@@ -6,6 +6,9 @@ import {
   PanelBottom,
   Plus,
   RotateCcw,
+  Smile,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import clsx from "clsx";
 import { Windowcontrols } from "../components";
@@ -13,6 +16,8 @@ import WindowWrapper from "../hoc/Windowwappre";
 import useThemeStore, { changeTheme } from "../store/theme";
 import useWallpaperStore, { CUSTOM_ID, WALLPAPERS } from "../store/wallpaper";
 import useDockStore, { ICON_STYLES, MINIMIZE_EFFECTS } from "../store/dock";
+import useSoundStore, { playSound } from "../store/sound";
+import usePixieStore, { callPixie } from "../store/pixie";
 import AppIcon from "../components/AppIcon";
 
 const THEME_OPTIONS = [
@@ -244,6 +249,103 @@ const DockPane = () => {
   );
 };
 
+const SoundPane = () => {
+  const { enabled, volume, startup, setSound } = useSoundStore();
+
+  return (
+    <div className="pane">
+      <h3>Sound</h3>
+      <p>Sound effects for windows, the startup and alerts.</p>
+
+      <div className="setting-group">
+        <div className="setting-row">
+          <span>Play sound effects</span>
+          <Toggle
+            label="Play sound effects"
+            checked={enabled}
+            onChange={(value) => setSound("enabled", value)}
+          />
+        </div>
+
+        <label className={clsx("setting-row", !enabled && "disabled")}>
+          <span>Volume</span>
+          <span className="slider">
+            <VolumeX size={14} />
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={volume}
+              disabled={!enabled}
+              onChange={(e) => setSound("volume", Number(e.target.value))}
+              // a short sound to judge the new level by
+              onPointerUp={() => playSound("pop")}
+              onKeyUp={() => playSound("pop")}
+            />
+            <Volume2 size={14} />
+          </span>
+        </label>
+
+        <div className={clsx("setting-row", !enabled && "disabled")}>
+          <span>Play sound on startup</span>
+          <Toggle
+            label="Play sound on startup"
+            checked={startup}
+            onChange={(value) => setSound("startup", value)}
+          />
+        </div>
+      </div>
+
+      <button
+        type="button"
+        className="restart"
+        disabled={!enabled}
+        onClick={() => playSound("startup")}
+      >
+        <Volume2 size={14} />
+        Play Startup Sound
+      </button>
+    </div>
+  );
+};
+
+const PixiePane = () => {
+  const { show, chatty, setPixie } = usePixieStore();
+
+  return (
+    <div className="pane">
+      <h3>Pixie</h3>
+      <p>The little guide who walks around the desktop and shows people how it works.</p>
+
+      <div className="setting-group">
+        <div className="setting-row">
+          <span>Show Pixie</span>
+          <Toggle
+            label="Show Pixie"
+            checked={show}
+            onChange={(value) => setPixie("show", value)}
+          />
+        </div>
+
+        <div className={clsx("setting-row", !show && "disabled")}>
+          <span>Share tips on her own</span>
+          <Toggle
+            label="Share tips on her own"
+            checked={chatty}
+            onChange={(value) => setPixie("chatty", value)}
+          />
+        </div>
+      </div>
+
+      <button type="button" className="restart" onClick={callPixie}>
+        <Smile size={14} />
+        Call Pixie
+      </button>
+    </div>
+  );
+};
+
 const AboutPane = () => (
   <div className="pane">
     <h3>About</h3>
@@ -267,6 +369,8 @@ const PANES = [
   { id: "appearance", label: "Appearance", icon: Palette, pane: AppearancePane },
   { id: "wallpaper", label: "Wallpaper", icon: ImageIcon, pane: WallpaperPane },
   { id: "dock", label: "Dock", icon: PanelBottom, pane: DockPane },
+  { id: "sound", label: "Sound", icon: Volume2, pane: SoundPane },
+  { id: "pixie", label: "Pixie", icon: Smile, pane: PixiePane },
   { id: "about", label: "About", icon: Info, pane: AboutPane },
 ];
 

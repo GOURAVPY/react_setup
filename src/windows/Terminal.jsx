@@ -5,6 +5,7 @@ import { Windowcontrols } from "../components";
 import useWindowStore from "../store/window";
 import useLaunchApp from "../store/launch";
 import { changeTheme } from "../store/theme";
+import { playSound } from "../store/sound";
 import { isMobile } from "../utils/device";
 import { COMMAND_NAMES, INTRO, runCommand } from "./terminalCommands";
 
@@ -289,6 +290,7 @@ const Terminal = () => {
 
     setPast((list) => [...list, typed]);
     const result = runCommand(typed, actions);
+    if (result.lines.some(({ tone }) => tone === "error")) playSound("error");
     // `clear` empties the screen itself, so it leaves nothing behind
     if (typed.trim().toLowerCase() !== "clear") {
       addEntry({ command: typed, ...result });

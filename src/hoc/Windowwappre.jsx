@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import useWindowStore from "../store/window";
 import { useGSAP } from "@gsap/react";
 import { Draggable } from "gsap/Draggable";
@@ -8,6 +8,7 @@ import createGenie from "./genie";
 import { RESET_EFFECTS, WINDOW_EFFECTS } from "./windowEffects";
 import { isMobile, mobileQuery } from "../utils/device";
 import useDockStore from "../store/dock";
+import { playSound } from "../store/sound";
 
 gsap.registerPlugin(Draggable);
 
@@ -75,25 +76,38 @@ const WindowWrapper = (Component, windowKey) => {
     const maximizedFrom = useRef(null);
     const genie = useRef(null);
 
-    useGSAP(() => {
+    // Like a Mac, a window is moved by its title bar only, so sliders, text
+    // and fields inside it work normally. Set up each time it opens, as some
+    // windows (text, image) only draw their title bar once they have content.
+    useEffect(() => {
       const el = ref.current;
-      if (!el) return;
+      if (!el || !isOpen) return;
 
       [draggable.current] = Draggable.create(el, {
-        onPress: () => focusWindow(windowKey),
+        trigger: el.querySelector("#window-header") ?? el,
+        // buttons and fields in the title bar (close, search) still click
+        dragClickables: false,
       });
 
-      // on a phone every app is full screen, so there is nothing to drag
+      // a press anywhere in the window brings it to the front
+      const focus = () => focusWindow(windowKey);
+      el.addEventListener("pointerdown", focus);
+
+      // on a phone every app is full screen, so there is nothing to drag;
+      // a maximized window stays put too
       const query = mobileQuery();
-      const syncDragging = () => draggable.current?.enabled(!query.matches);
+      const syncDragging = () =>
+        draggable.current?.enabled(!query.matches && !maximizedFrom.current);
       syncDragging();
       query.addEventListener("change", syncDragging);
 
       return () => {
+        el.removeEventListener("pointerdown", focus);
         query.removeEventListener("change", syncDragging);
         draggable.current?.kill();
+        draggable.current = null;
       };
-    }, []);
+    }, [isOpen, focusWindow]);
 
     // Maximize: fill the screen and lock dragging, then put the window back
     useGSAP(() => {
@@ -187,6 +201,7 @@ const WindowWrapper = (Component, windowKey) => {
       if (!isOpen) {
         gsap.killTweensOf(el);
         if (!was.isOpen || was.isMinimized) return hide();
+        playSound("close");
 
         // phone: the app shrinks back into its icon, like going home on iOS
         if (isMobile()) {
@@ -214,6 +229,7 @@ const WindowWrapper = (Component, windowKey) => {
 
       if (isMinimized) {
         if (was.isMinimized) return;
+        playSound("minimize");
         gsap.killTweensOf(el);
         el.style.display = "block";
         gsap.set(el, RESET_EFFECTS);
@@ -237,6 +253,7 @@ const WindowWrapper = (Component, windowKey) => {
         return;
       }
 
+      playSound("open");
       if (!playGenie(1, 0)) playEffect(true);
     }, [isOpen, isMinimized]);
 

@@ -737,6 +737,18 @@ body {
             }
         }
 
+        .slider {
+            @apply flex flex-none items-center gap-2 text-gray-500;
+
+            input {
+                @apply w-36 accent-blue-500 cursor-pointer disabled:cursor-default;
+            }
+        }
+
+        .restart:disabled {
+            @apply opacity-50 cursor-default;
+        }
+
         .switch {
             @apply relative flex-none w-9 h-5 rounded-full bg-gray-300 transition-colors cursor-pointer;
 
@@ -877,8 +889,8 @@ section.window-maximized {
     right: auto;
     width: 100dvw;
     max-width: none;
-    /* stops above the dock, like a zoomed window on a Mac */
-    height: calc(100dvh - var(--navbar-height, 2.5rem) - 7.5rem);
+    /* the dock hides while a window is full screen (see Dock.jsx) */
+    height: calc(100dvh - var(--navbar-height, 2.5rem));
     translate: none;
     border-radius: 0;
     display: flex !important;
@@ -901,11 +913,6 @@ section.window-maximized {
     .results {
         max-height: none;
     }
-}
-
-/* with the dock hidden away, a maximized window uses the full height */
-body:has(#dock.autohide) section.window-maximized {
-    height: calc(100dvh - var(--navbar-height, 2.5rem));
 }
 
 /* maximized: the game fills the window (it scales itself to fit) */
@@ -1571,6 +1578,113 @@ body:has(#dock.autohide) section.window-maximized {
 
 @media (max-width: 639px) {
     .dock-hotzone {
+        display: none;
+    }
+}
+
+/* Pixie, the little guide (src/components/pixie). Above windows, below the
+   dock and menu bar. Only she and her bubble catch the pointer. */
+.pixie {
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 99990;
+    width: 88px;
+    height: 96px;
+    pointer-events: none;
+    will-change: transform;
+}
+
+.pixie-sprite {
+    display: block;
+    width: 88px;
+    height: 96px;
+    pointer-events: auto;
+    cursor: grab;
+    image-rendering: pixelated;
+    transform-origin: 50% 100%;
+    outline: none;
+
+    &:active {
+        cursor: grabbing;
+    }
+
+    &:focus-visible {
+        filter: drop-shadow(0 0 4px #fff);
+    }
+}
+
+/* a pixel-style speech bubble, kept on screen near the edges */
+.pixie-bubble {
+    position: absolute;
+    bottom: calc(100% + 12px);
+    left: 50%;
+    translate: calc(-50% + var(--bubble-shift, 0px)) 0;
+    width: max-content;
+    max-width: 230px;
+    padding: 8px 12px;
+    pointer-events: auto;
+    cursor: pointer;
+    text-align: left;
+    font: 600 12px/1.45 var(--font-roboto);
+    color: #2b1b2e;
+    background: #fff;
+    border: 3px solid #2b1b2e;
+    border-radius: 6px;
+    box-shadow: 4px 4px 0 rgb(43 27 46 / 0.25);
+    animation: pixie-pop 0.18s steps(3) both;
+
+    /* the tail, pointing at Pixie even when the bubble is nudged sideways */
+    &::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: calc(50% - var(--bubble-shift, 0px));
+        width: 12px;
+        height: 12px;
+        background: #fff;
+        border-right: 3px solid #2b1b2e;
+        border-bottom: 3px solid #2b1b2e;
+        transform: translate(-50%, -55%) rotate(45deg);
+    }
+}
+
+/* Zzz, hearts and sparkles that float up from her */
+.pixie-fx {
+    position: absolute;
+    top: 6px;
+    left: 58%;
+    font: 700 16px/1 var(--font-roboto);
+    pointer-events: none;
+    animation: pixie-float 1.4s ease-out forwards;
+
+    &.zzz {
+        color: #e0e7ff;
+        text-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+    }
+
+    &.heart {
+        color: #ff6fa6;
+    }
+}
+
+@keyframes pixie-float {
+    to {
+        transform: translate(16px, -42px) scale(1.4);
+        opacity: 0;
+    }
+}
+
+@keyframes pixie-pop {
+    from {
+        transform: scale(0.6);
+        opacity: 0;
+    }
+}
+
+/* phones have the home screen instead of the desktop */
+@media (max-width: 639px) {
+    .pixie {
         display: none;
     }
 }

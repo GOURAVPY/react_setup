@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { locations, socials, techStack } from "../constants/indax";
+import { callPixie } from "../store/pixie";
 
 // Commands the Skills terminal understands.
 //
@@ -163,6 +164,14 @@ export const COMMANDS = {
         lines: [line(`Appearance set to ${value}.`, "success")],
         onDone: () => setTheme(value),
       };
+    },
+  },
+
+  pixie: {
+    description: "Call Pixie, the little guide",
+    run: () => {
+      callPixie();
+      return [line("Pixie is on her way! ✨", "success")];
     },
   },
 

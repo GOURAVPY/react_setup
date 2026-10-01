@@ -3,6 +3,8 @@
 // pressed. The bar tracks the desktop's images actually loading, but never
 // finishes faster than MIN_DURATION, so the screen does not just flash by.
 
+import { playSound } from "./store/sound.js";
+
 const MIN_DURATION = 2200;
 const MAX_DURATION = 8000; // give up waiting on a slow connection
 const FADE_DURATION = 600;
@@ -92,6 +94,7 @@ const runBootScreen = () => {
   const start = () => {
     const startedAt = performance.now() + LOGO_DELAY;
     screen.classList.add("starting");
+    playSound("startup");
 
     // setInterval rather than requestAnimationFrame, which pauses in a
     // background tab and would leave the screen stuck there

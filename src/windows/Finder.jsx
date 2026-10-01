@@ -16,9 +16,6 @@ const flatten = (items, path = []) =>
 
 const searchIndex = flatten(Object.values(locations));
 
-// Stops the window's drag handler from swallowing clicks meant for the input
-const stopDrag = (e) => e.stopPropagation();
-
 const Finder = () => {
   const openWindow = useWindowStore((state) => state.openWindow);
   const [isSearching, setIsSearching] = useState(false);
@@ -79,12 +76,7 @@ const Finder = () => {
       <div id="window-header">
         <Windowcontrols target="finder" />
         {isSearching ? (
-          <label
-            className="search"
-            onMouseDown={stopDrag}
-            onTouchStart={stopDrag}
-            onPointerDown={stopDrag}
-          >
+          <label className="search">
             <Search size={14} />
             <input
               autoFocus

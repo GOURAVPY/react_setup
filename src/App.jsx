@@ -1,4 +1,5 @@
 import gsap from "gsap";
+import Pixie from "./components/pixie/Pixie";
 import { Draggable } from "gsap/Draggable";
 import {
   Terminal,
@@ -30,6 +31,7 @@ const App = () => {
       <Welcome />
       <Dock />
       <MobileHome />
+      <Pixie />
 
       <Terminal />
       <Safari />
