@@ -6,6 +6,7 @@ import gsap from "gsap";
 import clsx from "clsx";
 import createGenie from "./genie";
 import { isMobile, mobileQuery } from "../utils/device";
+import useDockStore from "../store/dock";
 
 gsap.registerPlugin(Draggable);
 
@@ -16,9 +17,25 @@ const getPosition = (el) => ({
 
 const DOCK_SCALE = 0.05;
 
+let peekTimer = null;
+
+// An auto-hiding dock is shown for a moment while a window pours into or
+// out of it, so the window has somewhere to go. It is shown instantly (the
+// "peek" class turns its slide off), so it can be measured straight away.
+const peekDock = () => {
+  const dock = document.getElementById("dock");
+  if (!dock?.classList.contains("autohide")) return;
+
+  dock.classList.add("peek");
+  clearTimeout(peekTimer);
+  peekTimer = setTimeout(() => dock.classList.remove("peek"), 1400);
+};
+
 // A window's icon in the dock (or on the phone home screen), or the dock
 // itself for windows that have no icon
 const getDockTarget = (windowKey) => {
+  if (!isMobile()) peekDock();
+
   const [home, dock] = isMobile()
     ? ["#ios-home", "#ios-home .ios-dock"]
     : ["#dock", "#dock .dock-container"];
@@ -107,8 +124,11 @@ const WindowWrapper = (Component, windowKey) => {
 
       // Pours the window into its dock icon (or back out of it). Returns
       // false when there is no dock to pour into, e.g. on small screens.
+      // Returns false on phones, when the Scale effect is chosen in Settings,
+      // or when the window sits where it cannot pour into the dock.
       const playGenie = (from, to, onComplete) => {
-        if (isMobile()) return false;
+        const { minimizeEffect } = useDockStore.getState();
+        if (isMobile() || minimizeEffect !== "genie") return false;
         const dock = getDockTarget(windowKey)?.getBoundingClientRect();
         const effect = dock?.width ? createGenie(el, dock) : null;
         if (!effect) return false;

@@ -3,6 +3,7 @@ import {
   Image as ImageIcon,
   Info,
   Palette,
+  PanelBottom,
   Plus,
   RotateCcw,
 } from "lucide-react";
@@ -11,6 +12,8 @@ import { Windowcontrols } from "../components";
 import WindowWrapper from "../hoc/Windowwappre";
 import useThemeStore, { changeTheme } from "../store/theme";
 import useWallpaperStore, { CUSTOM_ID, WALLPAPERS } from "../store/wallpaper";
+import useDockStore, { ICON_STYLES } from "../store/dock";
+import AppIcon from "../components/AppIcon";
 
 const THEME_OPTIONS = [
   { value: "light", label: "Light" },
@@ -143,6 +146,101 @@ const WallpaperPane = () => {
   );
 };
 
+const Toggle = ({ checked, onChange, label }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={checked}
+    aria-label={label}
+    className="switch"
+    onClick={() => onChange(!checked)}
+  >
+    <span />
+  </button>
+);
+
+const PREVIEW_APPS = [
+  { id: "finder", image: "finder.png" },
+  { id: "safari", image: "safari.png" },
+  { id: "photos", image: "photos.png" },
+  { id: "terminal", image: "terminal.png" },
+];
+
+const DockPane = () => {
+  const {
+    iconStyle,
+    minimizeEffect,
+    autohide,
+    indicators,
+    setDock,
+    resetDock,
+  } = useDockStore();
+
+  return (
+    <div className="pane">
+      <h3>Dock</h3>
+      <p>Choose how the app icons look and how the Dock behaves.</p>
+
+      <h4>Icon style</h4>
+      <div className="icon-styles" role="radiogroup" aria-label="Icon style">
+        {ICON_STYLES.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={iconStyle === id}
+            onClick={() => setDock("iconStyle", id)}
+          >
+            {/* each preview shows its own style, whatever is chosen */}
+            <span className="preview">
+              {PREVIEW_APPS.map((app) => (
+                <AppIcon key={app.id} {...app} style={id} />
+              ))}
+            </span>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <div className="setting-group">
+        <label className="setting-row">
+          <span>Minimize windows using</span>
+          <select
+            value={minimizeEffect}
+            onChange={(e) => setDock("minimizeEffect", e.target.value)}
+          >
+            <option value="genie">Genie effect</option>
+            <option value="scale">Scale effect</option>
+          </select>
+        </label>
+
+        <div className="setting-row">
+          <span>Automatically hide and show the Dock</span>
+          <Toggle
+            label="Automatically hide and show the Dock"
+            checked={autohide}
+            onChange={(value) => setDock("autohide", value)}
+          />
+        </div>
+
+        <div className="setting-row">
+          <span>Show indicators for open applications</span>
+          <Toggle
+            label="Show indicators for open applications"
+            checked={indicators}
+            onChange={(value) => setDock("indicators", value)}
+          />
+        </div>
+      </div>
+
+      <button type="button" className="restart" onClick={resetDock}>
+        <RotateCcw size={14} />
+        Reset to Defaults
+      </button>
+    </div>
+  );
+};
+
 const AboutPane = () => (
   <div className="pane">
     <h3>About</h3>
@@ -165,6 +263,7 @@ const AboutPane = () => (
 const PANES = [
   { id: "appearance", label: "Appearance", icon: Palette, pane: AppearancePane },
   { id: "wallpaper", label: "Wallpaper", icon: ImageIcon, pane: WallpaperPane },
+  { id: "dock", label: "Dock", icon: PanelBottom, pane: DockPane },
   { id: "about", label: "About", icon: Info, pane: AboutPane },
 ];
 

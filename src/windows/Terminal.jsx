@@ -1,21 +1,197 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Check, Flag } from "lucide-react";
-import gsap from "gsap";
-import { useGSAP } from "@gsap/react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { techStack } from "../constants/indax";
 import Windowwappre from "../hoc/Windowwappre";
 import { Windowcontrols } from "../components";
 import useWindowStore from "../store/window";
 import useLaunchApp from "../store/launch";
 import { changeTheme } from "../store/theme";
 import { isMobile } from "../utils/device";
-import { COMMAND_NAMES, runCommand } from "./terminalCommands";
+import { COMMAND_NAMES, INTRO, runCommand } from "./terminalCommands";
 
-const COMMAND = "show tech stack";
-const PROMPT = "@gourav % ";
+const PROMPT = "@gourav %";
+
+const TICK = 30; // ms between animation frames
+const COMMAND_CHAR_TIME = 70; // ms per character when the intro types a command
+const STATUS_DURATION = 900; // ms for a progress pill to fill
+const STATUS_STEP = 90; // the pill fills in uneven jumps, like real progress
+const TYPE_CHAR_TIME = 16; // ms per character of a reply…
+const TYPE_MAX_TIME = 1100; // …but a long reply never takes longer than this
+
+const reducedMotion = () =>
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const easeOut = (t) => 1 - (1 - t) ** 3;
+
+const lineLength = ({ label, text }) => (label?.length ?? 0) + text.length;
 
 let nextEntryId = 0;
+
+const finish = (entry) =>
+  entry.phase === "done"
+    ? entry
+    : {
+        ...entry,
+        phase: "done",
+        started: true,
+        commandTyped: entry.command?.length ?? 0,
+        progress: 100,
+        typed: entry.chars,
+      };
+
+// One block on screen: an optional prompt line, an optional progress pill
+// and the reply. It plays through its phases in order:
+// "command" (intro only, types the command) → "working" (fills the pill)
+// → "typing" (types the reply) → "done"
+const makeEntry = ({
+  command = null,
+  status = null,
+  lines = [],
+  onDone = null,
+  rule = false,
+  delay = 0,
+  typeCommand = false,
+  intro = false,
+}) => {
+  const entry = {
+    id: nextEntryId++,
+    intro,
+    command,
+    status,
+    lines,
+    onDone,
+    rule: rule || Boolean(status),
+    delay,
+    chars: lines.reduce((total, line) => total + lineLength(line), 0),
+    phase: typeCommand ? "command" : status ? "working" : "typing",
+    startedAt: null,
+    started: false, // drawn only once its turn has come
+    commandTyped: 0,
+    progress: 0,
+    typed: 0,
+  };
+  return reducedMotion() ? finish(entry) : entry;
+};
+
+// Moves the first unfinished entry forward to `now`
+const advance = (entries, now) => {
+  const index = entries.findIndex(({ phase }) => phase !== "done");
+  if (index === -1) return entries;
+
+  const entry = { ...entries[index] };
+  if (entry.startedAt === null) entry.startedAt = now + entry.delay;
+  const elapsed = now - entry.startedAt;
+
+  const nextPhase = (phase) => {
+    entry.phase = phase;
+    entry.startedAt = now;
+  };
+
+  if (elapsed >= 0) entry.started = true;
+
+  if (elapsed < 0) {
+    // still waiting for its turn; only remember when it starts
+  } else if (entry.phase === "command") {
+    entry.commandTyped = Math.min(
+      entry.command.length,
+      Math.floor(elapsed / COMMAND_CHAR_TIME),
+    );
+    if (elapsed >= entry.command.length * COMMAND_CHAR_TIME + 350) {
+      nextPhase(entry.status ? "working" : "typing");
+    }
+  } else if (entry.phase === "working") {
+    const duration = entry.status.duration ?? STATUS_DURATION;
+    const stepped = Math.floor(elapsed / STATUS_STEP) * STATUS_STEP;
+    entry.progress = Math.min(
+      100,
+      Math.round(100 * easeOut(Math.min(1, stepped / duration))),
+    );
+    if (elapsed >= duration + 150) {
+      entry.progress = 100;
+      nextPhase("typing");
+    }
+  } else if (entry.phase === "typing") {
+    const duration = Math.min(TYPE_MAX_TIME, entry.chars * TYPE_CHAR_TIME);
+    entry.typed = duration
+      ? Math.floor(entry.chars * Math.min(1, elapsed / duration))
+      : entry.chars;
+    if (entry.typed >= entry.chars) nextPhase("done");
+  }
+
+  const updated = [...entries];
+  updated[index] = entry;
+  return updated;
+};
+
+// Small made-up "tokens processed" counter shown next to the pill
+const tokenCount = ({ chars, progress }) =>
+  `${Math.max(0.1, (chars * 1.7 * progress) / 100 / 1000).toFixed(1)}k`;
+
+const StatusPill = ({ entry }) => {
+  const { symbol, verb, percent = true } = entry.status;
+  const working = entry.phase === "working";
+
+  return (
+    <p className="status">
+      <span className="symbol">{symbol}</span>
+      <span className={clsx("pill", working && "working")}>
+        <span
+          className="fill"
+          style={{ width: percent ? `${entry.progress}%` : "100%" }}
+        />
+        <span className="pill-text">
+          {verb}…{percent && ` ${entry.progress}%`}
+        </span>
+      </span>
+      {entry.chars > 0 && <span className="count">{tokenCount(entry)}</span>}
+    </p>
+  );
+};
+
+// The reply, typed out up to `entry.typed` characters
+const Reply = ({ entry }) => {
+  const done = entry.phase === "done";
+  let remaining = entry.typed;
+  const shown = [];
+
+  for (const [i, line] of entry.lines.entries()) {
+    if (!done && remaining <= 0) break;
+    const length = lineLength(line);
+    const visible = done ? length : Math.min(length, remaining);
+    remaining -= visible;
+
+    const labelLength = line.label?.length ?? 0;
+    const label = line.label?.slice(0, visible);
+    const text = line.text.slice(0, Math.max(0, visible - labelLength));
+    const typing = !done && (visible < length || remaining <= 0);
+
+    shown.push(
+      <p
+        key={i}
+        className={clsx(
+          "out",
+          line.tone,
+          line.bullet && "bullet",
+          line.label && "labelled",
+        )}
+      >
+        {line.bullet && <span className="marker">▶</span>}
+        {line.label && <span className="out-label">{label}</span>}
+        <span className="out-text">
+          {line.href && done ? (
+            <a href={line.href} target="_blank" rel="noopener noreferrer">
+              {text}
+            </a>
+          ) : (
+            text
+          )}
+          {typing && <span className="caret" />}
+        </span>
+      </p>,
+    );
+  }
+
+  return shown;
+};
 
 const Terminal = () => {
   const isOpen = useWindowStore((state) => state.windows.terminal.isOpen);
@@ -23,88 +199,85 @@ const Terminal = () => {
   const launch = useLaunchApp();
 
   const container = useRef(null);
-  const command = useRef(null);
   const inputRef = useRef(null);
+  const finishedIds = useRef(new Set()); // entries whose onDone has run
 
-  const [entries, setEntries] = useState([]); // commands run and their output
+  const [entries, setEntries] = useState([]);
   const [input, setInput] = useState("");
-  const [cleared, setCleared] = useState(false); // `clear` also hides the intro
-  const [ready, setReady] = useState(false); // the intro has finished
   const [past, setPast] = useState([]); // previous commands, for ↑ and ↓
   const [pastIndex, setPastIndex] = useState(null);
+  const [wasOpen, setWasOpen] = useState(false);
 
-  // Every time the window opens it starts a fresh session
-  useEffect(() => {
-    if (isOpen) return;
-    setEntries([]);
+  // Opening the window starts a fresh session with the intro; closing it
+  // ends the session. Done while rendering, so the first frame of an open
+  // window already has the intro rather than flashing an empty prompt.
+  if (isOpen !== wasOpen) {
+    setWasOpen(isOpen);
+    setEntries(
+      isOpen
+        ? INTRO.map((block) =>
+            makeEntry({
+              ...block,
+              intro: true,
+              typeCommand: Boolean(block.command),
+            }),
+          )
+        : [],
+    );
     setInput("");
-    setCleared(false);
-    setReady(false);
     setPastIndex(null);
-  }, [isOpen]);
+  }
 
-  // Replays every time the window opens: the command is typed out, then the
-  // output prints line by line like a real terminal, then the prompt is
-  // handed to the visitor
-  useGSAP(
-    () => {
-      if (!isOpen) return;
+  const animating = entries.some(({ phase }) => phase !== "done");
+  // the prompt is handed over once the intro has played
+  const ready =
+    isOpen && !entries.some(({ intro, phase }) => intro && phase !== "done");
 
-      const typed = { length: 0 };
-      command.current.textContent = "";
-      gsap.set(".line, .next-prompt", { autoAlpha: 0 });
-      gsap.set(".content", { borderColor: "transparent" });
+  // One timer drives whichever entry is playing. setInterval rather than
+  // requestAnimationFrame, which stops when the tab is in the background.
+  useEffect(() => {
+    if (!animating) return;
+    const timer = setInterval(
+      () => setEntries((list) => advance(list, performance.now())),
+      TICK,
+    );
+    return () => clearInterval(timer);
+  }, [animating]);
 
-      gsap
-        .timeline({
-          delay: 0.6,
-          onComplete: () => setReady(true),
-        })
-        .to(typed, {
-          length: COMMAND.length,
-          duration: COMMAND.length * 0.07,
-          ease: `steps(${COMMAND.length})`,
-          onUpdate: () => {
-            command.current.textContent = COMMAND.slice(
-              0,
-              Math.round(typed.length),
-            );
-          },
-        })
-        .set(".typing-cursor", { display: "none" }, "+=0.35")
-        .to(".line", { autoAlpha: 1, duration: 0.01, stagger: 0.12 }, "+=0.15")
-        .set(".content", { clearProps: "borderColor" }, "<0.12")
-        .set(".next-prompt", { autoAlpha: 1 }, "+=0.2");
-    },
-    { dependencies: [isOpen], scope: container, revertOnUpdate: true },
-  );
+  // Run each finished entry's action (open an app, switch theme…) once
+  useEffect(() => {
+    entries.forEach(({ id, phase, onDone }) => {
+      if (phase !== "done" || !onDone || finishedIds.current.has(id)) return;
+      finishedIds.current.add(id);
+      onDone();
+    });
+  }, [entries]);
 
-  // Hand over the prompt once it is enabled. Not on a phone, where focusing
+  // Focus the prompt once it is enabled. Not on a phone, where focusing
   // would pop the keyboard up uninvited.
   useEffect(() => {
     if (ready && !isMobile()) inputRef.current?.focus({ preventScroll: true });
   }, [ready]);
 
-  // keep the prompt in view as output grows
+  // keep the newest output in view
   useLayoutEffect(() => {
     const el = container.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [entries, cleared]);
+  }, [entries]);
 
-  const clear = () => {
-    setEntries([]);
-    setCleared(true);
-  };
+  const clear = () => setEntries([]);
 
   const actions = {
     launch,
     clear,
     close: () => closeWindow("terminal"),
-    setTheme: (mode) => changeTheme(mode),
+    // the new theme spreads out from the prompt
+    setTheme: (mode) => changeTheme(mode, inputRef.current),
   };
 
-  const addEntry = (typed, lines = []) =>
-    setEntries((list) => [...list, { id: nextEntryId++, command: typed, lines }]);
+  // a new command finishes anything still playing, then starts its own block
+  const addEntry = (entry) =>
+    setEntries((list) => [...list.map(finish), makeEntry(entry)]);
 
   const submit = (e) => {
     e.preventDefault();
@@ -112,12 +285,14 @@ const Terminal = () => {
     setInput("");
     setPastIndex(null);
 
-    if (!typed.trim()) return addEntry("");
+    if (!typed.trim()) return addEntry({ command: "" });
 
     setPast((list) => [...list, typed]);
-    const lines = runCommand(typed, actions);
+    const result = runCommand(typed, actions);
     // `clear` empties the screen itself, so it leaves nothing behind
-    if (typed.trim().toLowerCase() !== "clear") addEntry(typed, lines);
+    if (typed.trim().toLowerCase() !== "clear") {
+      addEntry({ command: typed, ...result });
+    }
   };
 
   const onKeyDown = (e) => {
@@ -155,7 +330,7 @@ const Terminal = () => {
     // Ctrl+C abandons the line, like a real shell
     if (e.ctrlKey && e.key.toLowerCase() === "c") {
       e.preventDefault();
-      addEntry(`${input}^C`);
+      addEntry({ command: `${input}^C` });
       setInput("");
       setPastIndex(null);
     }
@@ -176,76 +351,40 @@ const Terminal = () => {
         <h2>Tech Stack</h2>
       </div>
       <div className="techstack" ref={container} onClick={focusPrompt}>
-        <div className={clsx(cleared && "hidden")}>
-          <p>
-            <span>{PROMPT}</span>
-            <span ref={command}>{COMMAND}</span>
-            <span className="cursor typing-cursor" />
-          </p>
-          <div className="label line">
-            <p className="w-32">Category</p>
-            <p>Technologies</p>
-          </div>
-          <ul className="content">
-            {techStack.map(({ category, items }) => (
-              <li key={category} className="flex items-center line">
-                <Check className="check" size={20} />
-                <h3>{category}</h3>
-                <ul>
-                  {items.map((item, i) => (
-                    <li key={i}>
-                      {item}
-                      {i < items.length - 1 ? "," : ""}
-                    </li>
-                  ))}
-                </ul>
-              </li>
-            ))}
-          </ul>
-          <div className="footnote">
-            <p className="line">
-              <Check size={20} />
-              {techStack.length} of {techStack.length} stacks loaded
-              successfully
-            </p>
-            <p className="text-black line">
-              <Flag size={15} fill="currentColor" />
-              Render time : 6ms
-            </p>
-          </div>
-          <p className="hint line">
-            Type <b>help</b> to see what else you can run.
-          </p>
-        </div>
-
-        {entries.map(({ id, command: typed, lines }) => (
-          <div key={id} className="entry">
-            <p>
-              <span>{PROMPT}</span>
-              {typed}
-            </p>
-            {lines.map(({ text, tone, label, href }, i) => (
-              <p
-                key={i}
-                className={clsx("out", tone)}
-                style={{ animationDelay: `${i * 35}ms` }}
-              >
-                {label && <span className="out-label">{label}</span>}
-                {href ? (
-                  <a href={href} target="_blank" rel="noopener noreferrer">
-                    {text}
-                  </a>
+        {entries
+          .filter(({ started }) => started)
+          .map((entry) => (
+          <Fragment key={entry.id}>
+            {entry.command !== null && (
+              <p className="prompt-line">
+                <span className="prompt">{PROMPT}</span>{" "}
+                {entry.phase === "command" ? (
+                  <>
+                    {entry.command.slice(0, entry.commandTyped)}
+                    <span className="cursor" />
+                  </>
                 ) : (
-                  text
+                  entry.command
                 )}
               </p>
-            ))}
-          </div>
+            )}
+
+            {entry.phase !== "command" && (
+              <>
+                {entry.rule && <hr className="rule" />}
+                {entry.status && <StatusPill entry={entry} />}
+                {entry.phase !== "working" && <Reply entry={entry} />}
+              </>
+            )}
+          </Fragment>
         ))}
 
-        <form className="next-prompt" onSubmit={submit}>
+        <form
+          className={clsx("next-prompt", !ready && "invisible")}
+          onSubmit={submit}
+        >
           <label>
-            <span>{PROMPT}</span>
+            <span className="prompt">{PROMPT}</span>{" "}
             <span className="typed">{input}</span>
             <span className="cursor" />
             <input

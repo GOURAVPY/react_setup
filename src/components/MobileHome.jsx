@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import { dockApps } from "#constants/indax.js";
 import useWindowStore from "../store/window";
 import useLaunchApp from "../store/launch";
+import AppIcon from "./AppIcon";
 
 const APPS = [
   ...dockApps.filter(({ id }) => id !== "trash"),
@@ -31,7 +32,7 @@ const MobileHome = () => {
         aria-label={name}
         onClick={() => launch(id)}
       >
-        <img src={`/images/${icon}`} alt="" />
+        <AppIcon id={id} image={icon} />
         {showLabel && <span>{name}</span>}
       </button>
     </li>

@@ -1,12 +1,21 @@
 import dayjs from "dayjs";
 import { locations, socials, techStack } from "../constants/indax";
 
-// Commands the Skills terminal understands. Each command's `run` gets the
-// words typed after it and a few actions from the terminal, and returns the
-// lines to print. A line is { text, tone, label, href }:
-//   tone   colours the line: "muted", "success", "error" or "accent"
-//   label  an aligned green column in front of the text
-//   href   turns the text into a link
+// Commands the Skills terminal understands.
+//
+// A command's `run` gets the words typed after it and a few actions from the
+// terminal, and returns either the lines to print or
+// { lines, status, onDone } to override its status or act once the reply has
+// finished typing (opening an app, switching theme).
+//
+// `status` is the progress pill shown before the reply:
+//   { symbol, verb, duration, percent }  percent: false shows no percentage
+//
+// A line is { text, tone, label, href, bullet }:
+//   tone    colours the line: "muted", "success", "error" or "accent"
+//   label   an aligned bold column in front of the text
+//   href    turns the text into a link
+//   bullet  starts the line with a ▶ marker
 
 const line = (text, tone) => ({ text, tone });
 
@@ -29,23 +38,32 @@ const APP_NAMES = "portfolio, articles, gallery, contact, resume, settings";
 
 const THEMES = ["light", "dark", "system"];
 
+const skillLines = () =>
+  techStack.map(({ category, items }) => ({
+    bullet: true,
+    label: category,
+    text: items.join(", "),
+  }));
+
 export const COMMANDS = {
   help: {
     description: "List the commands you can run",
+    status: { symbol: "✦", verb: "Loading", duration: 450 },
     run: () => [
-      line("Available commands:", "muted"),
       ...Object.entries(COMMANDS)
         .filter(([, command]) => !command.hidden)
         .map(([name, { usage, description }]) => ({
+          bullet: true,
           label: usage ?? name,
           text: description,
         })),
-      line("Tip: Tab completes a command, ↑ and ↓ go through history.", "muted"),
+      line("Tab completes a command, ↑ and ↓ go through history.", "muted"),
     ],
   },
 
   about: {
     description: "A little about me",
+    status: { symbol: "⌘", verb: "Profiling" },
     run: () => {
       const aboutMe = locations.about.children.find(
         ({ fileType }) => fileType === "txt",
@@ -56,19 +74,15 @@ export const COMMANDS = {
 
   skills: {
     description: "My tech stack",
-    run: () =>
-      techStack.map(({ category, items }) => ({
-        label: `✓ ${category}`,
-        text: items.join(", "),
-      })),
+    status: { symbol: "✦", verb: "Analysing" },
+    run: skillLines,
   },
 
   projects: {
     description: "Projects I have built",
+    status: { symbol: "✦", verb: "Indexing" },
     run: () => [
-      ...locations.work.children.map(({ name }, i) =>
-        line(`${i + 1}. ${name}`),
-      ),
+      ...locations.work.children.map(({ name }) => ({ bullet: true, text: name })),
       line("Run `open portfolio` to look inside them.", "muted"),
     ],
   },
@@ -87,8 +101,10 @@ export const COMMANDS = {
 
   contact: {
     description: "Where to find me",
+    status: { symbol: "⌘", verb: "Connecting" },
     run: () =>
       socials.map(({ text, link }) => ({
+        bullet: true,
         label: text,
         text: link.replace(/^https?:\/\/(www\.)?/, ""),
         href: link,
@@ -98,35 +114,51 @@ export const COMMANDS = {
   open: {
     usage: "open <app>",
     description: "Open an app, e.g. open resume",
+    status: { symbol: "⌘", verb: "Launching", duration: 600 },
     run: ([name], { launch }) => {
-      if (!name) return [line(`usage: open <app>  (${APP_NAMES})`, "error")];
+      if (!name) {
+        return {
+          status: null,
+          lines: [line(`usage: open <app>  (${APP_NAMES})`, "error")],
+        };
+      }
 
       const key = name.toLowerCase();
       if (["skills", "terminal"].includes(key)) {
-        return [line("You're already here.", "muted")];
+        return { status: null, lines: [line("You're already here.", "muted")] };
       }
       if (!APPS[key]) {
-        return [
-          line(`open: no app called "${name}". Try: ${APP_NAMES}`, "error"),
-        ];
+        return {
+          status: null,
+          lines: [
+            line(`open: no app called "${name}". Try: ${APP_NAMES}`, "error"),
+          ],
+        };
       }
 
-      // after the line has printed, so the reply shows before the app opens
-      setTimeout(() => launch(APPS[key]), 250);
-      return [line(`Opening ${key}…`, "success")];
+      return {
+        lines: [line(`${key} is ready.`, "success")],
+        onDone: () => launch(APPS[key]),
+      };
     },
   },
 
   theme: {
     usage: "theme <mode>",
     description: "Switch to light, dark or system appearance",
+    status: { symbol: "✦", verb: "Repainting", duration: 600 },
     run: ([mode], { setTheme }) => {
       const value = mode?.toLowerCase();
       if (!THEMES.includes(value)) {
-        return [line(`usage: theme <${THEMES.join("|")}>`, "error")];
+        return {
+          status: null,
+          lines: [line(`usage: theme <${THEMES.join("|")}>`, "error")],
+        };
       }
-      setTheme(value);
-      return [line(`Appearance set to ${value}.`, "success")];
+      return {
+        lines: [line(`Appearance set to ${value}.`, "success")],
+        onDone: () => setTheme(value),
+      };
     },
   },
 
@@ -156,10 +188,11 @@ export const COMMANDS = {
 
   exit: {
     description: "Close the terminal",
-    run: (_, { close }) => {
-      setTimeout(close, 300);
-      return [line("Saving session… completed.", "muted")];
-    },
+    status: { symbol: "⌘", verb: "Saving session", duration: 500 },
+    run: (_, { close }) => ({
+      lines: [line("[Process completed]", "muted")],
+      onDone: () => setTimeout(close, 350),
+    }),
   },
 
   sudo: {
@@ -175,16 +208,42 @@ export const COMMANDS = {
 
 export const COMMAND_NAMES = Object.keys(COMMANDS);
 
-// Runs one line of input and returns the lines to print
+// Runs one line of input. Returns { lines, status, onDone }.
 export const runCommand = (input, actions) => {
   const [name, ...args] = input.trim().split(/\s+/);
   const command = COMMANDS[name.toLowerCase()];
 
   if (!command) {
-    return [
-      line(`zsh: command not found: ${name}`, "error"),
-      line("Type `help` to see what you can run.", "muted"),
-    ];
+    return {
+      status: null,
+      lines: [
+        line(`zsh: command not found: ${name}`, "error"),
+        line("Type `help` to see what you can run.", "muted"),
+      ],
+    };
   }
-  return command.run(args, actions);
+
+  const result = command.run(args, actions);
+  const { lines, ...rest } = Array.isArray(result) ? { lines: result } : result;
+  return { status: command.status ?? null, onDone: null, ...rest, lines };
 };
+
+// What plays each time the terminal opens, one block after another
+export const INTRO = [
+  {
+    command: "show tech stack",
+    status: { symbol: "✦", verb: "Analysing" },
+    lines: skillLines(),
+    delay: 600, // let the window finish opening first
+  },
+  {
+    status: { symbol: "⌘", verb: "Initializing", percent: false, duration: 1100 },
+    lines: [line("Let's build something great 🚀", "success")],
+    delay: 250,
+  },
+  {
+    rule: true,
+    lines: [line("Type `help` to see what else you can run.", "muted")],
+    delay: 200,
+  },
+];
