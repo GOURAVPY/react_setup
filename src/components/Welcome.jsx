@@ -77,12 +77,6 @@ const Welcome = () => {
         {renderText("portfolio", "text-9xl italic font-georama")}
       </h1>
 
-      <div className="small-screen">
-        <p>
-          This portfolio is designed for desktop/tablet screens only.OR YOU Want
-          to Try u Can on DestopTap
-        </p>
-      </div>
     </section>
   );
 };

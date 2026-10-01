@@ -67,10 +67,16 @@ const dockApps = [
     canOpen: true,
   },
   {
+    id: "settings",
+    name: "Settings",
+    icon: "settings.svg",
+    canOpen: true,
+  },
+  {
     id: "trash",
     name: "Archive", // was "Trash"
     icon: "trash.png",
-    canOpen: false,
+    canOpen: true,
   },
 ];
 
@@ -525,6 +531,13 @@ const WINDOW_CONFIG = {
     data: null,
   },
   terminal: {
+    isOpen: false,
+    isMaximized: false,
+    isMinimized: false,
+    zIndex: INITIAL_Z_INDEX,
+    data: null,
+  },
+  settings: {
     isOpen: false,
     isMaximized: false,
     isMinimized: false,

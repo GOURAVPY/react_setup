@@ -7,7 +7,8 @@ body {
     width: 100dvw;
     overflow: hidden;
     height: 100dvh;
-    background-image: url("/images/wallpaper.png");
+    /* --wallpaper is set from src/store/wallpaper.js */
+    background-image: var(--wallpaper, url("/images/wallpaper.png"));
     background-size: cover;
     background-repeat: no-repeat;
     background-position: center;
@@ -461,6 +462,160 @@ body {
         }
     }
 
+    #settings {
+        @apply w-2xl absolute top-24 left-3/12 bg-white shadow-2xl drop-shadow-2xl rounded-xl overflow-hidden;
+
+        #window-header h2 {
+            @apply font-bold text-sm text-center flex-1 pr-14;
+        }
+
+        .sidebar {
+            @apply w-52 flex-none bg-gray-50 border-r border-gray-200 p-4 space-y-4;
+
+            .profile {
+                @apply flex items-center gap-3;
+
+                span {
+                    @apply size-10 flex-none rounded-full flex-center font-semibold;
+                    color: #fff;
+                    background: linear-gradient(160deg, #8f9bff, #4338ca);
+                }
+
+                p {
+                    @apply text-sm font-semibold;
+                }
+
+                small {
+                    @apply text-xs text-gray-400;
+                }
+            }
+
+            ul {
+                @apply space-y-1;
+            }
+
+            li {
+                @apply flex items-center gap-2 px-3 py-2 rounded-md cursor-pointer text-sm font-medium transition-colors;
+            }
+
+            .active {
+                @apply bg-blue-100 text-blue-700;
+            }
+
+            .not-active {
+                @apply text-gray-700 hover:bg-gray-200;
+            }
+        }
+
+        .pane {
+            @apply flex-1 min-h-80 p-6;
+
+            h3 {
+                @apply text-lg font-semibold;
+            }
+
+            > p {
+                @apply text-sm text-gray-500 mt-1;
+            }
+        }
+
+        .themes {
+            @apply flex gap-5 mt-6;
+
+            button {
+                @apply flex flex-col items-center gap-2 text-xs font-medium cursor-pointer;
+
+                &[aria-pressed="true"] .preview {
+                    outline: 3px solid #3b82f6;
+                }
+            }
+
+            /* miniature desktop with a window on it */
+            .preview {
+                @apply block relative w-24 h-16 rounded-lg overflow-hidden;
+                outline: 1px solid rgb(128 128 128 / 0.4);
+                outline-offset: 2px;
+                background: linear-gradient(135deg, #4f46e5, #1e3a8a);
+
+                i {
+                    @apply absolute left-3 right-3 top-4 bottom-0 rounded-t-md;
+                    background: #f5f5f5;
+                }
+
+                &.dark i {
+                    background: #1e1e1e;
+                }
+
+                &.system i {
+                    background: linear-gradient(90deg, #f5f5f5 50%, #1e1e1e 50%);
+                }
+            }
+        }
+
+        .current {
+            @apply flex items-center gap-4 mt-4 pb-5 border-b border-gray-200;
+
+            span {
+                @apply block flex-none w-36 h-24 rounded-lg bg-cover bg-center;
+                outline: 1px solid rgb(128 128 128 / 0.4);
+            }
+
+            p {
+                @apply text-sm font-semibold;
+            }
+
+            small {
+                @apply text-xs text-gray-500;
+            }
+        }
+
+        .wallpapers {
+            @apply grid grid-cols-4 gap-x-3 gap-y-4 mt-5;
+
+            button {
+                @apply flex flex-col items-center gap-1.5 text-xs font-medium cursor-pointer;
+
+                span {
+                    @apply block w-full h-14 rounded-md bg-cover bg-center;
+                    outline: 1px solid rgb(128 128 128 / 0.4);
+                    outline-offset: 2px;
+                }
+
+                .add {
+                    @apply flex-center bg-gray-100 text-gray-500;
+                }
+
+                &[aria-pressed="true"] span {
+                    outline: 3px solid #3b82f6;
+                }
+            }
+        }
+
+        [role="status"] {
+            @apply mt-4 text-xs text-gray-500;
+        }
+
+        dl {
+            @apply mt-5 text-sm;
+
+            div {
+                @apply flex justify-between gap-5 py-2.5 border-b border-gray-200;
+            }
+
+            dt {
+                @apply text-gray-500;
+            }
+
+            dd {
+                @apply font-medium text-right;
+            }
+        }
+
+        .restart {
+            @apply mt-6 flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium cursor-pointer bg-gray-100 border border-gray-200 hover:bg-gray-200;
+        }
+    }
+
     #home {
         @apply relative z-0 max-sm:hidden;
 
@@ -517,7 +672,7 @@ section.window-maximized {
     body {
         background-image:
             linear-gradient(rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.45)),
-            url("/images/wallpaper.png");
+            var(--wallpaper, url("/images/wallpaper.png"));
     }
 
     :is(nav, .window) {
@@ -673,6 +828,360 @@ section.window-maximized {
             &:hover {
                 background: rgb(255 255 255 / 0.5);
             }
+        }
+    }
+}
+
+/* Phone home screen: only shown below the sm breakpoint (see the block below) */
+#ios-home,
+#home-indicator {
+    display: none;
+}
+
+/* iPhone layout. On phones the Mac desktop becomes an iOS-style home screen
+   and every window becomes a full-screen app. Unlayered on purpose, so these
+   rules win over the per-window desktop rules above. */
+@media (max-width: 639px) {
+    #welcome,
+    #home,
+    #dock {
+        display: none;
+    }
+
+    /* menu bar becomes the status bar */
+    nav {
+        --color-black: #ffffff;
+        height: 2.5rem;
+        padding: 0 1.5rem;
+        color: #ffffff;
+        background: transparent;
+        backdrop-filter: none;
+
+        img {
+            filter: invert(1);
+        }
+
+        > div:first-child {
+            display: none;
+        }
+
+        > div:last-child {
+            display: flex;
+            flex-direction: row-reverse;
+            justify-content: space-between;
+            width: 100%;
+
+            > ul {
+                display: flex;
+                gap: 0.75rem;
+
+                > li:nth-child(2),
+                > li:nth-child(3) {
+                    display: none;
+                }
+            }
+        }
+
+        .theme-menu section {
+            color: var(--color-gray-800);
+        }
+    }
+
+    /* an app is open: the status bar sits on the app, not the wallpaper */
+    main:has(.window[style*="display: block"]) nav {
+        --color-black: var(--color-gray-800);
+        color: var(--color-gray-800);
+        background: var(--color-gray-50);
+
+        img {
+            filter: none;
+        }
+    }
+
+    #ios-home {
+        position: fixed;
+        inset: 2.5rem 0 0;
+        display: flex;
+        flex-direction: column;
+        gap: 1.75rem;
+        padding: 1rem 1.25rem 2.25rem;
+        color: #ffffff;
+        user-select: none;
+
+        .widget {
+            padding: 1.1rem 1.25rem;
+            border-radius: 1.5rem;
+            background: rgb(255 255 255 / 0.18);
+            backdrop-filter: blur(24px);
+
+            small {
+                font-size: 0.7rem;
+                font-weight: 600;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+                opacity: 0.8;
+            }
+
+            h1 {
+                margin-top: 0.15rem;
+                font-family: var(--font-georama);
+                font-size: 1.6rem;
+                font-weight: 700;
+            }
+
+            p {
+                font-size: 0.85rem;
+                opacity: 0.85;
+            }
+        }
+
+        ul {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+        }
+
+        .apps {
+            flex: 1;
+            align-content: start;
+            gap: 1.5rem 0.5rem;
+        }
+
+        button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+            width: 100%;
+            transition: transform 0.15s;
+
+            &:active {
+                transform: scale(0.9);
+            }
+
+            img {
+                width: 3.75rem;
+                height: 3.75rem;
+                object-fit: contain;
+            }
+
+            span {
+                font-size: 0.7rem;
+                font-weight: 500;
+                text-shadow: 0 1px 3px rgb(0 0 0 / 0.5);
+            }
+        }
+
+        .ios-dock {
+            padding: 0.75rem 0.5rem;
+            border-radius: 2rem;
+            background: rgb(255 255 255 / 0.22);
+            backdrop-filter: blur(24px);
+        }
+    }
+
+    /* every window is a full-screen app below the status bar */
+    .window {
+        position: fixed;
+        inset: 2.5rem 0 0;
+        width: 100vw;
+        max-width: none;
+        height: auto;
+        translate: none;
+        border-radius: 0;
+        overflow: hidden auto;
+        background: var(--color-white);
+        box-shadow: none;
+        filter: none;
+        padding-bottom: 2rem;
+    }
+
+    #window-controls {
+        display: none;
+    }
+
+    #window-header {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        justify-content: center;
+        border-radius: 0;
+    }
+
+    /* the bar at the bottom of an app that takes you back to the home screen */
+    #home-indicator {
+        position: fixed;
+        left: 50%;
+        bottom: 0;
+        z-index: 200000;
+        display: block;
+        padding: 0.75rem 2rem 0.5rem;
+        translate: -50% 0;
+        cursor: pointer;
+        touch-action: none;
+
+        span {
+            display: block;
+            width: 8.5rem;
+            height: 0.3rem;
+            border-radius: 99px;
+            background: rgb(128 128 128 / 0.95);
+        }
+    }
+
+    #finder {
+        #window-header {
+            justify-content: flex-end;
+
+            .search {
+                width: 100%;
+            }
+        }
+
+        > div:last-child {
+            flex-direction: column;
+        }
+
+        .sidebar {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border-right: 0;
+            border-bottom: 1px solid var(--color-gray-200);
+
+            ul {
+                display: flex;
+                gap: 0.5rem;
+                overflow-x: auto;
+
+                li {
+                    flex: none;
+                    margin: 0;
+                }
+            }
+        }
+
+        .content {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.75rem 0.5rem;
+            max-width: none;
+            padding: 1.5rem 1rem;
+
+            li {
+                position: static;
+
+                p {
+                    width: auto;
+                }
+            }
+        }
+
+        .results {
+            max-height: none;
+        }
+    }
+
+    #safari {
+        #window-header {
+            > svg,
+            > div:not(.flex-1),
+            .flex-1 > svg {
+                display: none;
+            }
+
+            .search {
+                width: 100%;
+            }
+        }
+
+        .blog {
+            padding: 1.5rem 1.25rem;
+        }
+    }
+
+    #terminal .techstack {
+        overflow-x: auto;
+
+        .label {
+            margin-inline-start: 1.75rem;
+        }
+
+        .content li {
+            align-items: flex-start;
+
+            h3 {
+                flex: none;
+                width: 6rem;
+                margin-inline-start: 0.5rem;
+            }
+
+            ul {
+                flex-wrap: wrap;
+                gap: 0 0.5rem;
+            }
+        }
+    }
+
+    #contact ul {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+
+        li {
+            width: auto;
+        }
+    }
+
+    #photos .sidebar {
+        display: none;
+    }
+
+    #resume {
+        .react-pdf__Page {
+            min-width: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        canvas {
+            width: 100% !important;
+            height: auto !important;
+        }
+
+        .react-pdf__Page__textContent,
+        .react-pdf__Page__annotations {
+            display: none;
+        }
+    }
+
+    #imgfile .preview {
+        max-height: none;
+    }
+
+    #settings {
+        #window-header h2 {
+            padding: 0;
+        }
+
+        > div:last-child {
+            flex-direction: column;
+        }
+
+        .sidebar {
+            width: 100%;
+            border-right: 0;
+            border-bottom: 1px solid var(--color-gray-200);
+
+            ul {
+                display: flex;
+                gap: 0.25rem;
+
+                li {
+                    margin: 0;
+                }
+            }
+        }
+
+        .wallpapers {
+            grid-template-columns: repeat(3, 1fr);
         }
     }
 }

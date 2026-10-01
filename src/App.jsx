@@ -9,8 +9,16 @@ import {
   Contact,
   Image,
   Photos,
+  Settings,
 } from "./windows";
-import { Navbar, Welcome, Dock, Home, Login } from "#components";
+import {
+  Navbar,
+  Welcome,
+  Dock,
+  Home,
+  Login,
+  MobileHome,
+} from "#components";
 
 gsap.registerPlugin(Draggable);
 
@@ -20,6 +28,7 @@ const App = () => {
       <Navbar />
       <Welcome />
       <Dock />
+      <MobileHome />
 
       <Terminal />
       <Safari />
@@ -28,6 +37,7 @@ const App = () => {
       <Text />
       <Image />
       <Photos />
+      <Settings />
       <Contact />
       <Home />
       <Login />

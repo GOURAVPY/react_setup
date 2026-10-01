@@ -5,6 +5,7 @@ import { Draggable } from "gsap/Draggable";
 import gsap from "gsap";
 import clsx from "clsx";
 import createGenie from "./genie";
+import { isMobile, mobileQuery } from "../utils/device";
 
 gsap.registerPlugin(Draggable);
 
@@ -15,10 +16,18 @@ const getPosition = (el) => ({
 
 const DOCK_SCALE = 0.05;
 
-// A window's dock icon, or the dock itself for windows that have no icon
-const getDockTarget = (windowKey) =>
-  document.querySelector(`#dock [data-app="${windowKey}"]`) ??
-  document.querySelector("#dock .dock-container");
+// A window's icon in the dock (or on the phone home screen), or the dock
+// itself for windows that have no icon
+const getDockTarget = (windowKey) => {
+  const [home, dock] = isMobile()
+    ? ["#ios-home", "#ios-home .ios-dock"]
+    : ["#dock", "#dock .dock-container"];
+
+  return (
+    document.querySelector(`${home} [data-app="${windowKey}"]`) ??
+    document.querySelector(dock)
+  );
+};
 
 // Distance from the window's centre to its dock target. The window must be
 // visible and unscaled.
@@ -54,7 +63,16 @@ const WindowWrapper = (Component, windowKey) => {
         onPress: () => focusWindow(windowKey),
       });
 
-      return () => draggable.current?.kill();
+      // on a phone every app is full screen, so there is nothing to drag
+      const query = mobileQuery();
+      const syncDragging = () => draggable.current?.enabled(!query.matches);
+      syncDragging();
+      query.addEventListener("change", syncDragging);
+
+      return () => {
+        query.removeEventListener("change", syncDragging);
+        draggable.current?.kill();
+      };
     }, []);
 
     // Maximize: fill the screen and lock dragging, then put the window back
@@ -88,6 +106,7 @@ const WindowWrapper = (Component, windowKey) => {
       // Pours the window into its dock icon (or back out of it). Returns
       // false when there is no dock to pour into, e.g. on small screens.
       const playGenie = (from, to, onComplete) => {
+        if (isMobile()) return false;
         const dock = getDockTarget(windowKey)?.getBoundingClientRect();
         const effect = dock?.width ? createGenie(el, dock) : null;
         if (!effect) return false;
@@ -123,6 +142,21 @@ const WindowWrapper = (Component, windowKey) => {
       if (!isOpen) {
         gsap.killTweensOf(el);
         if (!was.isOpen || was.isMinimized) return hide();
+
+        // phone: the app shrinks back into its icon, like going home on iOS
+        if (isMobile()) {
+          gsap.set(el, { x: 0, y: 0, scale: 1 });
+          gsap.to(el, {
+            ...getDockOffset(el, windowKey),
+            scale: DOCK_SCALE,
+            opacity: 0,
+            duration: 0.4,
+            ease: "power3.in",
+            onComplete: hide,
+          });
+          return;
+        }
+
         gsap.to(el, {
           scale: 0.92,
           opacity: 0,

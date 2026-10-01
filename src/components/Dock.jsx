@@ -4,9 +4,11 @@ import { Tooltip } from "react-tooltip";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import useWindowStore from "../store/window";
+import useLaunchApp from "../store/launch";
 
 const Dock = () => {
-  const { openWindow, focusWindow, windows } = useWindowStore();
+  const { windows } = useWindowStore();
+  const launch = useLaunchApp();
   const Dockref = useRef(null);
 
   useGSAP(() => {
@@ -74,14 +76,8 @@ const Dock = () => {
   const launchApp = (app, button) => {
     if (!app.canOpen) return;
 
-    const window = windows[app.id];
-
-    if (window.isOpen && !window.isMinimized) {
-      focusWindow(app.id);
-    } else {
-      if (!window.isOpen) bounceIcon(button);
-      openWindow(app.id);
-    }
+    if (windows[app.id] && !windows[app.id].isOpen) bounceIcon(button);
+    launch(app.id);
   };
 
   return (

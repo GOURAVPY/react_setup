@@ -6,5 +6,6 @@ import Text from "./Text";
 import Contact from "./Contact";
 import Image from "./Image";
 import Photos from "./Photos";
+import Settings from "./Settings";
 
-export { Terminal, Safari, Resume, Finder, Text, Contact, Image, Photos };
+export { Terminal, Safari, Resume, Finder, Text, Contact, Image, Photos, Settings };
