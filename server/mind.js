@@ -37,8 +37,17 @@ const STEPS = {
   twirl: {},
   think: { text: 60 },
   say: { text: 70 },
+  // with her things
+  bed: { seconds: [8, 40] },
+  slingshot: {},
+  kick: {},
+  water: {},
+  read: { seconds: [5, 20] },
+  dance: { seconds: [3, 10] },
 };
-const TARGET = /^(left|center|right|pointer|(window|dock):[a-z0-9-]{1,20})$/;
+const TARGET = /^(left|center|right|pointer|sky|ball|theme|(window|dock):[a-z0-9-]{1,20})$/;
+// what she may aim her slingshot at: never the visitor
+const SLINGSHOT_TARGET = /^(sky|ball|theme|(window|dock):[a-z0-9-]{1,20})$/;
 
 const SCHEMA = {
   type: "object",
@@ -85,12 +94,21 @@ Steps:
 - {"do":"wave"}, {"do":"hop"}, {"do":"twirl"}
 - {"do":"think","text":"..."}: a thought bubble the visitor can see, under 60 characters
 - {"do":"say","text":"..."}: speak to the visitor, under 70 characters
+- {"do":"read","seconds":5-20}: sit and read your book
+- {"do":"dance","seconds":3-10}: a happy little dance with music notes
+- {"do":"slingshot","to":"sky", "ball", "theme", "dock:ID" or "window:ID"}: shoot a harmless little star with your slingshot; a hit makes the icon or window wobble a bit. "theme" is the light/dark switch in the menu bar: hitting it flips the theme
+- {"do":"bed","seconds":8-40}: walk to your bed and sleep in it (needs yourThings)
+- {"do":"kick"}: run after your ball and kick it (needs yourThings)
+- {"do":"water"}: water your plant so it grows (needs yourThings; best when it's thirsty)
 TARGET is "left", "center", "right", "pointer" (where the visitor's mouse is), "window:ID" for an open window in the snapshot, or "dock:ID" for an app icon in the dock.
 
 How to behave:
 - Most steps are movement and poses. Use at most one "think" and one "say" per plan, and often neither.
 - React to what's happening: an app the visitor just opened, the theme, the time of day, whether the visitor is busy or idle, how they treated you.
-- Follow your needs: low energy means sit or nap; high boredom means explore, twirl, or visit the dock or a window; feeling lonely means wave or say something friendly, but never nag.
+- Follow your needs: low energy means sit, nap or go to bed; high boredom means play: kick your ball, read, dance, use your slingshot, or explore the dock and windows; feeling lonely means wave or say something friendly, but never nag.
+- Your things (bed, plant, ball) are in "yourThings". If it's null they're put away: don't use bed, kick or water. Water your plant when it's thirsty.
+- Use the slingshot at most once per plan, and don't aim at a window the visitor seems busy in.
+- You have a taste in light: bright light mode late at night hurts your eyes, and dark mode on a sunny afternoon is gloomy. If you really dislike the current theme and "themeSwitch" is "allowed", you may shoot the switch ("to":"theme") to flip it (you grumble about the light by yourself as you aim, so no "say" step is needed). Never when "themeSwitch" is "not now".
 - Don't repeat your last plan; be a little surprising.
 - Keep texts short, cute and in the visitor's language (snapshot "language").
 - Don't state facts about ${name}. You may mention that projects, skills or contact details are in the apps.
@@ -109,6 +127,7 @@ const clean = (raw) => {
       const rule = STEPS[step.do];
       const out = { do: step.do };
       if (typeof step.to === "string" && TARGET.test(step.to)) out.to = step.to;
+      if (step.do === "slingshot" && !SLINGSHOT_TARGET.test(out.to ?? "")) out.to = "sky";
       if (step.do === "walk") out.pace = step.pace === "trot" ? "trot" : "stroll";
       if (rule.seconds) {
         const [min, max] = rule.seconds;

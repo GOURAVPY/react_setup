@@ -9,6 +9,9 @@ import * as LINES from "./lines";
 // plan of steps (walk somewhere, sit, think something…) that she carries out
 // in order. Without a plan she wanders about on her own. Clicks, drags and
 // falls are always handled here, straight away.
+//
+// She has things on the desktop too (things.js): a bed she sleeps in, a ball
+// she chases, a plant she waters. And a slingshot, a book and her dancing.
 
 const W = WIDTH * SCALE;
 const H = HEIGHT * SCALE;
@@ -21,6 +24,18 @@ const COMMENT_GAP = 6000; // ms between remarks about what you are doing
 const DRAG_START = 6; // px the pointer moves before a press becomes a pick-up
 const DOUBLE_CLICK = 240; // ms to wait for a second click before acting on one
 const PLAN_STALE = 90_000; // ms before an unfinished plan is out of date
+const KICK_REACH = 10; // px from the ball before she can kick it
+
+// her taste: light mode late at night is too bright, dark mode in the middle
+// of the day too gloomy
+const dislikesTheme = () => {
+  const hour = new Date().getHours();
+  const dark = document.documentElement.dataset.theme === "dark";
+  return dark ? hour >= 9 && hour < 17 : hour >= 21 || hour < 6;
+};
+
+// the line her feet (and her things) stand on, in px from the top
+export const floorLine = () => window.innerHeight - FLOOR_GAP;
 
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 const between = (min, max) => min + Math.random() * (max - min);
@@ -37,8 +52,23 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
  * @param wantPlan  called when she has run out of plan; her mind may answer
  *                  later through setPlan
  * @param onEvent   told what the visitor did to her ("picked you up", …)
+ * @param things    her bed, plant and ball (things.js), or null
+ * @param canFlipTheme  returns whether she may shoot the light/dark switch now
+ * @param onThemeHit    called when her star hits it, to flip the theme
  */
-export const createPixie = ({ root, canvas, say, think, chatty, onTap, wantPlan, onEvent }) => {
+export const createPixie = ({
+  root,
+  canvas,
+  say,
+  think,
+  chatty,
+  onTap,
+  wantPlan,
+  onEvent,
+  things = null,
+  canFlipTheme = () => false,
+  onThemeHit,
+}) => {
   const ctx = canvas.getContext("2d");
   const floor = () => window.innerHeight - FLOOR_GAP - H;
 
@@ -68,6 +98,7 @@ export const createPixie = ({ root, canvas, say, think, chatty, onTap, wantPlan,
     lastTouched: null, // when the visitor last played with her
     lookX: 0,
     puffIn: 0,
+    shot: null, // where her slingshot is aimed
     tip: 0,
     lastActive: performance.now(),
     lastSpoke: performance.now(),
@@ -77,6 +108,8 @@ export const createPixie = ({ root, canvas, say, think, chatty, onTap, wantPlan,
   };
 
   const setMode = (mode, length = 0) => {
+    if (pet.mode === "bed" && mode !== "bed") things?.bed.empty();
+    pet.lift = 0;
     pet.mode = mode;
     pet.time = 0;
     pet.length = length;
@@ -100,6 +133,71 @@ export const createPixie = ({ root, canvas, say, think, chatty, onTap, wantPlan,
     pet.lastTouched = performance.now();
     pet.boredom = clamp(pet.boredom - 25, 0, 100);
     onEvent?.(what);
+  };
+
+  // ------------------------------------------------------------ her things
+
+  // her things can be switched off, and hide behind full-screen windows
+  const hasThings = () => Boolean(things?.available());
+
+  // walks to her bed and climbs in, for `seconds` (0: until someone wakes her);
+  // without her bed she naps where she is
+  const goToBed = (seconds, speed = WALK_SPEED) => {
+    if (!hasThings()) {
+      setMode("sleep", seconds);
+      return;
+    }
+    walkTo(things.bed.headX() - W / 2, () => {
+      if (!hasThings()) return setMode("sleep", seconds);
+      things.bed.tuckIn();
+      setMode("bed", seconds);
+      if (chatty() && Math.random() < 0.5) speak(pick(LINES.BEDTIME));
+    }, speed);
+  };
+
+  // where a slingshot star should go: a dock icon, a window, her ball or the sky
+  const aimAt = (to) => {
+    const onScreen = (rect) =>
+      rect && rect.width > 0 && rect.bottom > 0 && rect.top < window.innerHeight - 4;
+    const [kind, id = ""] = String(to ?? "sky").split(":");
+    if (kind === "dock") {
+      const element = document.querySelector(`#dock [data-app="${CSS.escape(id)}"]`);
+      const rect = element?.getBoundingClientRect();
+      if (onScreen(rect)) {
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, element };
+      }
+    }
+    if (kind === "window") {
+      const element = document.getElementById(id);
+      const rect = element?.getBoundingClientRect();
+      if (onScreen(rect)) {
+        return { x: rect.left + rect.width * between(0.3, 0.7), y: rect.top + 18, element };
+      }
+    }
+    if (kind === "ball" && hasThings()) {
+      return { x: things.ball.center(), y: things.ball.top() + 12, ball: true };
+    }
+    // the light/dark switch in the menu bar
+    if (kind === "theme" && hasThings() && canFlipTheme()) {
+      const element = document.querySelector(".theme-menu > button");
+      const rect = element?.getBoundingClientRect();
+      if (onScreen(rect)) {
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2, element, theme: true };
+      }
+    }
+    const side = Math.random() < 0.5 ? -1 : 1;
+    return { x: pet.x + W / 2 + side * between(120, 360), y: -40 };
+  };
+
+  // the top of her slingshot, where the stars fly from
+  const slingshotTip = () => ({
+    x: pet.x + (pet.facingLeft ? WIDTH - 1 - 20 : 20) * SCALE + SCALE / 2,
+    y: pet.y - pet.lift + 9 * SCALE,
+  });
+
+  const randomDockIcon = () => {
+    const icons = [...document.querySelectorAll("#dock [data-app]")];
+    return icons.length ? `dock:${pick(icons).dataset.app}` : "sky";
   };
 
   const walkTo = (x, onArrive = null, speed = WALK_SPEED) => {
@@ -131,13 +229,35 @@ export const createPixie = ({ root, canvas, say, think, chatty, onTap, wantPlan,
   const wander = () => {
     const roll = Math.random();
     if ((pet.energy < 25 || pet.mood === "sleepy") && roll < 0.5) {
-      setMode("sit", between(6, 12));
+      if (hasThings()) goToBed(between(12, 25));
+      else setMode("sit", between(6, 12));
+      return;
+    }
+    // now and then, one of her pastimes
+    if (roll < 0.3) {
+      const pastimes = ["read", "dance", "slingshot"];
+      // she doesn't like the light or dark mode: time for her slingshot
+      if (dislikesTheme() && canFlipTheme()) {
+        pastimes.push("theme", "theme", "theme");
+      }
+      if (hasThings()) pastimes.push("kick", "kick");
+      if (hasThings() && things.plant.thirsty()) pastimes.push("water", "water");
+      const what = pick(pastimes);
+      if (what === "theme") {
+        runStep({ do: "slingshot", to: "theme" });
+        return;
+      }
+      runStep({
+        do: what,
+        seconds: what === "read" ? between(6, 12) : between(3, 6),
+        to: what === "slingshot" ? pick(["sky", randomDockIcon()]) : undefined,
+      });
       return;
     }
     const speed = pet.mood === "excited" ? TROT_SPEED * 0.7 : WALK_SPEED;
-    if (roll < 0.55) walkTo(between(16, window.innerWidth - W - 16), null, speed);
-    else if (roll < 0.75) setMode("sit", between(4, 9));
-    else if (roll < 0.85) setMode("wave", 1.4);
+    if (roll < 0.62) walkTo(between(16, window.innerWidth - W - 16), null, speed);
+    else if (roll < 0.78) setMode("sit", between(4, 9));
+    else if (roll < 0.86) setMode("wave", 1.4);
     else setMode("idle", between(2, 5));
   };
 
@@ -188,6 +308,45 @@ export const createPixie = ({ root, canvas, say, think, chatty, onTap, wantPlan,
         setMode("twirl");
         puff("✨", "sparkle");
         break;
+      case "bed":
+        goToBed(step.seconds ?? 15);
+        break;
+      case "slingshot":
+        pet.shot = aimAt(step.to);
+        pet.facingLeft = pet.shot.x < pet.x + W / 2;
+        // she grumbles about the light first, and takes her time aiming
+        if (pet.shot.theme && chatty()) {
+          const dark = document.documentElement.dataset.theme === "dark";
+          speak(pick(dark ? LINES.TOO_DARK : LINES.TOO_BRIGHT));
+        }
+        setMode("aim", pet.shot.theme ? 1.6 : 0.8);
+        break;
+      case "kick":
+        if (hasThings()) setMode("chase", 8);
+        else wander();
+        break;
+      case "water":
+        if (!hasThings()) {
+          wander();
+          break;
+        }
+        // stands just left of the pot so the can pours into it
+        walkTo(
+          things.plant.left() - 70,
+          () => {
+            pet.facingLeft = false;
+            setMode("water", 2.4);
+            if (chatty() && Math.random() < 0.5) speak(pick(LINES.WATERING));
+          },
+          step.pace === "trot" ? TROT_SPEED : WALK_SPEED,
+        );
+        break;
+      case "read":
+        setMode("read", step.seconds ?? 10);
+        break;
+      case "dance":
+        setMode("dance", step.seconds ?? 5);
+        break;
       case "say":
       case "think":
         // with tips switched off she keeps her thoughts to herself
@@ -229,7 +388,11 @@ export const createPixie = ({ root, canvas, say, think, chatty, onTap, wantPlan,
         if (pet.pointerX !== null && Math.abs(pet.pointerX - (pet.x + W / 2)) < 350) {
           pet.facingLeft = pet.pointerX < pet.x + W / 2;
         }
-        if (pet.time > pet.length && !pet.busy) (sleepy ? setMode("sit", 3) : chooseNext());
+        if (pet.time > pet.length && !pet.busy) {
+          if (!sleepy) chooseNext();
+          else if (hasThings()) goToBed(0);
+          else setMode("sit", 3);
+        }
         break;
 
       case "walk": {
@@ -249,7 +412,7 @@ export const createPixie = ({ root, canvas, say, think, chatty, onTap, wantPlan,
       }
 
       case "sit":
-        if (sleepy) setMode("sleep");
+        if (sleepy) (hasThings() ? goToBed(0) : setMode("sleep"));
         else if (pet.time > pet.length) rest(1, 3);
         break;
 
@@ -267,6 +430,95 @@ export const createPixie = ({ root, canvas, say, think, chatty, onTap, wantPlan,
       case "look":
         pet.facingLeft = pet.lookX < pet.x;
         if (pet.time > pet.length) rest(1, 2);
+        break;
+
+      case "bed":
+        pet.puffIn -= dt;
+        if (pet.puffIn <= 0) {
+          pet.puffIn = 1.4;
+          puff("z", "zzz");
+        }
+        // her bed went away (switched off, or behind a full-screen window)
+        if (!hasThings()) setMode("sleep", pet.length);
+        else if (pet.length && pet.time > pet.length) setMode("wave", 1.2);
+        break;
+
+      case "aim":
+        if (pet.time > pet.length) {
+          const shot = pet.shot ?? aimAt("sky");
+          pet.shot = null;
+          things?.shoot(slingshotTip(), shot, () => {
+            if (shot.ball && hasThings()) things.ball.kick(Math.sign(shot.x - slingshotTip().x) || 1, 0.7);
+            if (shot.theme) {
+              onThemeHit?.();
+              puff("♥", "heart");
+              if (chatty()) speak(pick(LINES.MUCH_BETTER));
+            } else if (shot.y > 0 && chatty() && Math.random() < 0.6) {
+              speak(pick(LINES.BULLSEYE));
+            }
+          });
+          setMode("release", 0.45);
+        }
+        break;
+
+      case "release":
+        if (pet.time > pet.length) rest(1, 2);
+        break;
+
+      case "chase": {
+        // runs after her ball and kicks it once she reaches it
+        if (!hasThings() || pet.time > pet.length) {
+          rest(1, 2);
+          break;
+        }
+        const ballX = things.ball.center();
+        const ballRight = ballX > pet.x + W / 2;
+        const spot = ballRight ? ballX - W + 18 : ballX - 18;
+        const gap = spot - pet.x;
+        const step = TROT_SPEED * 1.3 * dt;
+        if (Math.abs(gap) <= Math.max(step, KICK_REACH)) {
+          pet.facingLeft = !ballRight;
+          things.ball.kick(ballRight ? 1 : -1);
+          setMode("kick", 0.35);
+          puff("✦", "sparkle");
+        } else {
+          pet.facingLeft = gap < 0;
+          pet.x += Math.sign(gap) * step;
+        }
+        break;
+      }
+
+      case "kick":
+        if (pet.time > pet.length) rest(1.5, 3);
+        break;
+
+      case "water":
+        pet.puffIn -= dt;
+        if (pet.puffIn <= 0) {
+          pet.puffIn = 0.28;
+          puff("💧", "drop");
+        }
+        if (pet.time > pet.length) {
+          if (hasThings() && things.plant.water()) {
+            puff("♥", "heart");
+            if (chatty()) speak(LINES.PLANT_GREW);
+          }
+          rest(1.5, 3);
+        }
+        break;
+
+      case "read":
+        if (pet.time > pet.length) rest(1, 2);
+        break;
+
+      case "dance":
+        pet.lift = Math.abs(Math.sin(pet.time * Math.PI * 2.5)) * 8;
+        pet.puffIn -= dt;
+        if (pet.puffIn <= 0) {
+          pet.puffIn = 0.6;
+          puff(pick(["♪", "♫"]), "note");
+        }
+        if (pet.time > pet.length) rest(1.5, 3);
         break;
 
       case "wave":
@@ -357,6 +609,18 @@ export const createPixie = ({ root, canvas, say, think, chatty, onTap, wantPlan,
         ];
       case "wave":
         return tick(0.22) % 2 ? "waveOut" : "waveUp";
+      case "aim":
+      case "release":
+      case "water":
+        return pet.mode;
+      case "read":
+        return pet.time % 4 > 3.6 ? "readPage" : "read";
+      case "dance":
+        return ["waveUp", "happy", "waveOut", "happy"][tick(0.25) % 4];
+      case "chase":
+        return ["stepA", "stand", "stepB", "stand"][tick(0.08) % 4];
+      case "kick":
+        return "stepA";
       default:
         if (pet.blinkIn < 0) return "blink";
         if (pet.talking) return tick(0.14) % 2 ? "talk" : "stand";
@@ -366,10 +630,17 @@ export const createPixie = ({ root, canvas, say, think, chatty, onTap, wantPlan,
 
   let drawn = "";
   let shift = 0;
+  let inBed = false;
 
   const render = () => {
     root.style.transform = `translate(${pet.x.toFixed(1)}px, ${(pet.y - pet.lift).toFixed(1)}px)`;
     canvas.style.transform = `rotate(${(pet.spin + pet.tilt).toFixed(1)}deg) scaleY(${pet.squash.toFixed(3)})`;
+
+    // tucked in, she is part of the bed's picture
+    if (inBed !== (pet.mode === "bed")) {
+      inBed = pet.mode === "bed";
+      canvas.style.visibility = inBed ? "hidden" : "";
+    }
 
     const name = frameName();
     const key = `${name}${pet.facingLeft ? "<" : ">"}`;
@@ -400,6 +671,7 @@ export const createPixie = ({ root, canvas, say, think, chatty, onTap, wantPlan,
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     update(dt, now);
+    things?.update(dt);
     render();
     frame = requestAnimationFrame(loop);
   };
@@ -584,6 +856,34 @@ export const createPixie = ({ root, canvas, say, think, chatty, onTap, wantPlan,
       if (pet.mode === "idle") pet.length = Math.min(pet.length, pet.time + 0.3);
     },
 
+    // the visitor clicked one of her things (the ball has already been kicked)
+    touchThing(name) {
+      active();
+      if (pet.busy || pet.mode === "held" || pet.mode === "fall") return;
+      if (name === "bed") {
+        if (pet.mode === "bed") {
+          touched("woke you up");
+          speak(pick(LINES.WAKE));
+          setMode("wave", 1.2);
+        } else {
+          touched("sent you to bed");
+          pet.plan = [];
+          goToBed(between(8, 14), TROT_SPEED);
+        }
+      } else if (name === "ball") {
+        touched("kicked your ball");
+        if (chatty() && Math.random() < 0.6) speak(pick(LINES.BALL_KICKED));
+        if (pet.mode !== "bed" && pet.mode !== "sleep") {
+          pet.plan = [];
+          setMode("chase", 8);
+        }
+      } else if (name === "plant") {
+        touched("asked you to water your plant");
+        pet.plan = [];
+        runStep({ do: "water", pace: "trot" });
+      }
+    },
+
     // something happened on the page worth noticing
     notice() {
       pet.boredom = clamp(pet.boredom - 15, 0, 100);
@@ -602,6 +902,7 @@ export const createPixie = ({ root, canvas, say, think, chatty, onTap, wantPlan,
           pet.lastTouched === null ? "never" : Math.round((now - pet.lastTouched) / 1000),
         visitorIdleSeconds: Math.round((now - pet.lastActive) / 1000),
         pointerX: pet.pointerX === null ? null : pet.pointerX / window.innerWidth,
+        things: hasThings() ? things.describe() : null,
       };
     },
 

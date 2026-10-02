@@ -34,8 +34,9 @@ const describeStep = (step) =>
  * @param engine      her body (createPixie)
  * @param events      returns what happened lately, as short lines
  * @param isChatting  returns whether a visitor is chatting with her
+ * @param canFlipTheme  returns whether she may shoot the light/dark switch
  */
-export const createMind = ({ engine, events, isChatting }) => {
+export const createMind = ({ engine, events, isChatting, canFlipTheme = () => false }) => {
   let next = 0; // when she may ask again
   let pending = null;
   let lastPlan = [];
@@ -76,6 +77,8 @@ export const createMind = ({ engine, events, isChatting }) => {
       time: `${now.toLocaleDateString("en-GB", { weekday: "long" })} ${partOfDay(now.getHours())}, ${now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`,
       language: navigator.language,
       theme: document.documentElement.dataset.theme ?? "light",
+      // whether she may shoot the light/dark switch to flip the theme now
+      themeSwitch: canFlipTheme() ? "allowed" : "not now",
       you: {
         position: round(me.x), // 0 = left edge, 1 = right edge
         doing: me.doing,
@@ -90,6 +93,8 @@ export const createMind = ({ engine, events, isChatting }) => {
         recentEvents: events(),
       },
       openWindows: openWindows(),
+      // her bed, plant and ball; null when they are put away
+      yourThings: me.things,
       dock: dockApps.map(({ id, name }) => ({ id, name })),
       yourLastPlan: lastPlan,
     };

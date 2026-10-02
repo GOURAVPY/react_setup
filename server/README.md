@@ -3,7 +3,7 @@
 Pixie uses Gemini in two ways: she answers visitors' questions, and her "mind" decides what she does next. This folder is the small server that holds the Gemini key, so the key never reaches the browser.
 
 - `brain.js`: the chat (`/api/pixie`). It contains her instructions and what she knows, and it limits each visitor to 15 questions per 10 minutes and the whole site to 500 per day.
-- `mind.js`: her own decisions (`/api/pixie/mind`). About once a minute, while someone is using the page, the page describes the moment: where she is, her mood, energy and boredom, open windows, and what the visitor just did. Gemini then plans her next 30 to 60 seconds: walk somewhere, sit, nap, think or say something, and so on. Each visitor gets at most 12 plans per 10 minutes, and the whole site 1500 per day. Without a plan, or when the server says no, she wanders about on her own as before.
+- `mind.js`: her own decisions (`/api/pixie/mind`). About once a minute, while someone is using the page, the page describes the moment: where she is, her mood, energy and boredom, open windows, and what the visitor just did. Gemini then plans her next 30 to 60 seconds: walk somewhere, sit, think or say something, read, dance, use her slingshot, kick her ball, water her plant, sleep in her bed, and so on. Each visitor gets at most 12 plans per 10 minutes, and the whole site 1500 per day. Without a plan, or when the server says no, she wanders about on her own as before.
 - `common.js`: the parts both share: limits, website checks and the Gemini call.
 - `profile.js`: facts about you. **Fill this in.** She also uses the projects, skills and links from `src/constants/indax.js`.
 - `index.js`: runs the handler as its own web service for the live site.

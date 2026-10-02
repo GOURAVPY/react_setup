@@ -20,6 +20,9 @@ export const TIPS = [
   "Contact has every way to reach Gourav. Say hi!",
   "You can pick me up and drop me anywhere. Wheee!",
   "Double-click me for a little twirl ✨",
+  "My bed is in the corner. Click it and I might take a nap!",
+  "Click my ball to kick it, then watch me chase it!",
+  "Water my plant by clicking it, and it grows a little each time 🌱",
 ];
 
 export const GREETINGS = ["Hi there!", "Hello! 💕", "Need a hand? Click me!", "Oh, hi!"];
@@ -64,3 +67,23 @@ export const ASK = [
 export const BRAIN_TIRED = "Phew, that's a lot of questions! Let me rest a little 😅";
 
 export const BRAIN_DOWN = "Oops, my brain is napping 😴 Try again soon, or open Contact!";
+
+// her things: bed, slingshot, ball, plant
+export const BEDTIME = ["Nap time… 😴", "Just five more minutes…", "So cosy! Zz"];
+
+export const BULLSEYE = ["Bullseye! ✨", "Hehe, got it!", "Ping! ✦"];
+
+export const BALL_KICKED = ["Hey, my ball! 😆", "Ooh, I'll get it!", "Catch me if you can!"];
+
+export const WATERING = ["Grow, little plant! 🌱", "Drink up!", "Splish splash 💧"];
+
+export const PLANT_GREW = "Look, my plant grew! 🌱✨";
+
+// when she doesn't like the light or dark mode, she shoots the switch
+export const TOO_BRIGHT = ["Too bright! My eyes! 😎", "Way too bright in here…"];
+
+export const TOO_DARK = ["It's too dark, I can't see my book! 💡", "Who turned off the lights?"];
+
+export const MUCH_BETTER = ["Much better! ✨", "Ahh, that's nicer!"];
+
+export const YOU_WIN = "Okay, okay, you win! 😅";

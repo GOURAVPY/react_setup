@@ -33,6 +33,14 @@ const DOING = {
   held: "Being carried",
   fall: "Falling!",
   land: "Landing",
+  bed: "Asleep in her bed",
+  aim: "Aiming her slingshot",
+  release: "Shooting a star",
+  chase: "Chasing her ball",
+  kick: "Kicking her ball",
+  water: "Watering her plant",
+  read: "Reading a book",
+  dance: "Dancing",
 };
 
 // her plan steps, e.g. "walk window:arcade trot" -> "walk the arcade window trot"
@@ -42,8 +50,16 @@ const readable = (step) =>
 // which picture to show for what she's doing out on the desktop
 const POSES = {
   sleep: () => "sleep",
+  bed: () => "sleep",
   sit: (tick) => (tick % 16 === 15 ? "sleep" : "sit"),
   walk: (tick) => ["stepA", "stand", "stepB", "stand"][tick % 4],
+  chase: (tick) => ["stepA", "stand", "stepB", "stand"][tick % 4],
+  kick: () => "stepA",
+  aim: () => "aim",
+  release: () => "release",
+  water: () => "water",
+  read: (tick) => (tick % 20 === 19 ? "readPage" : "read"),
+  dance: (tick) => ["waveUp", "happy", "waveOut", "happy"][tick % 4],
   hop: () => "happy",
   twirl: () => "happy",
   held: () => "held",
@@ -200,7 +216,7 @@ const DiaryPane = () => {
 };
 
 const OptionsPane = () => {
-  const { show, chatty, mind, setPixie } = usePixieStore();
+  const { show, chatty, mind, things, setPixie } = usePixieStore();
 
   return (
     <div className="pane">
@@ -222,6 +238,18 @@ const OptionsPane = () => {
             label="Shares tips and thoughts"
             checked={chatty}
             onChange={(value) => setPixie("chatty", value)}
+          />
+        </div>
+
+        <div className={clsx("setting-row", !show && "disabled")}>
+          <span>
+            Her things on the desktop
+            <small>Her bed, plant and ball, and her slingshot stars.</small>
+          </span>
+          <Toggle
+            label="Her things on the desktop"
+            checked={things}
+            onChange={(value) => setPixie("things", value)}
           />
         </div>
 

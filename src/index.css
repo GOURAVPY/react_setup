@@ -1916,12 +1916,94 @@ section.window-maximized {
     &.heart {
         color: #ff6fa6;
     }
+
+    &.note {
+        color: #c084fc;
+        text-shadow: 0 1px 0 #2b1b2e;
+    }
+
+    /* water from her can, dripping into the pot */
+    &.drop {
+        top: 74%;
+        left: 96%;
+        font-size: 9px;
+        animation: pixie-drip 0.5s ease-in forwards;
+    }
+
+    /* where a slingshot star lands (placed in px on the things layer) */
+    &.star {
+        margin: -10px 0 0 -8px;
+        color: #ffd166;
+        text-shadow: 0 0 6px rgb(255 209 102 / 0.9);
+    }
 }
 
 @keyframes pixie-float {
     to {
         transform: translate(16px, -42px) scale(1.4);
         opacity: 0;
+    }
+}
+
+@keyframes pixie-drip {
+    to {
+        transform: translate(4px, 26px);
+        opacity: 0.2;
+    }
+}
+
+/* her bed, plant and ball, on the floor just behind her */
+.pixie-things {
+    position: fixed;
+    inset: 0;
+    z-index: 99989;
+    pointer-events: none;
+
+    &.hidden {
+        display: none;
+    }
+}
+
+.pixie-thing {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: auto;
+    cursor: pointer;
+    image-rendering: pixelated;
+    will-change: transform;
+}
+
+/* a star from her slingshot, in flight */
+.pixie-shot {
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: -10px 0 0 -8px;
+    font: 700 18px/1 var(--font-roboto);
+    color: #ffd166;
+    text-shadow:
+        0 0 6px rgb(255 209 102 / 0.9),
+        0 1px 0 #2b1b2e;
+    pointer-events: none;
+    will-change: transform;
+}
+
+/* a window or dock icon hit by a star wobbles a little. The rotate property
+   adds to the transform it already has, so dragging and the dock still work */
+.pixie-bonk {
+    animation: pixie-bonk 0.5s ease-out;
+}
+
+@keyframes pixie-bonk {
+    25% {
+        rotate: -2deg;
+    }
+    50% {
+        rotate: 1.5deg;
+    }
+    75% {
+        rotate: -0.6deg;
     }
 }
 
@@ -1934,7 +2016,8 @@ section.window-maximized {
 
 /* phones have the home screen instead of the desktop */
 @media (max-width: 639px) {
-    .pixie {
+    .pixie,
+    .pixie-things {
         display: none;
     }
 }

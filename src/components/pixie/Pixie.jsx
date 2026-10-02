@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Send, X } from "lucide-react";
 import clsx from "clsx";
 import { WIDTH, HEIGHT, SCALE } from "./sprites";
-import { createPixie } from "./engine";
+import { createPixie, floorLine } from "./engine";
+import { createThings } from "./things";
 import { askPixie, brainEnabled, wakeBrain } from "./brain";
 import { createMind } from "./mind";
 import {
@@ -13,10 +14,11 @@ import {
   CHAT_INTRO,
   INTRO,
   THEME_COMMENTS,
+  YOU_WIN,
 } from "./lines";
 import usePixieStore from "../../store/pixie";
 import useWindowStore from "../../store/window";
-import useThemeStore from "../../store/theme";
+import useThemeStore, { changeTheme } from "../../store/theme";
 import { playSound } from "../../store/sound";
 
 const TYPE_SPEED = 28; // ms per letter as her bubble fills in
@@ -27,6 +29,9 @@ const CHAT_TIMEOUT = 120_000; // ms of nobody chatting before the box closes
 const EVENTS_KEPT = 6; // recent happenings her mind is told about
 const EVENT_MEMORY = 5 * 60_000; // ms she remembers them for
 const VITALS_EVERY = 1500; // ms between updates of her energy etc. for her app
+const THEME_FLIP_KEY = "pixie-flipped-theme"; // she flips the theme once a visit at most
+const RESPECT_CHOICE = 3 * 60_000; // ms after the visitor picks a theme that she leaves it alone
+const SETTLE_IN = 90_000; // ms on the page before she would touch the switch at all
 
 const ago = (ms) => (ms < 60_000 ? `${Math.round(ms / 1000)}s ago` : `${Math.round(ms / 60_000)} min ago`);
 
@@ -48,6 +53,7 @@ const desktopReady = () =>
 const PixieOnScreen = () => {
   const root = useRef(null);
   const canvas = useRef(null);
+  const layer = useRef(null); // her bed, plant and ball
   const engine = useRef(null);
   const queue = useRef([]); // lines still to come after the current one
   const [bubble, setBubble] = useState(null); // { text, id, live, kind }
@@ -62,6 +68,9 @@ const PixieOnScreen = () => {
   const pending = useRef(null); // AbortController of the answer on its way
   const input = useRef(null);
   const happenings = useRef([]); // [{ text, at }] for her mind
+  // her slingshot and the light/dark switch: when the visitor last chose a
+  // theme, what she flipped it to, and whether she has given up
+  const themeFight = useRef({ visitorChoseAt: 0, flipTo: null, flipAt: 0, gaveUp: false });
 
   const say = useCallback((text) => {
     // while chatting, her own remarks would talk over the answers
@@ -177,7 +186,41 @@ const PixieOnScreen = () => {
   // her behaviour runs for as long as she is on screen
   useEffect(() => {
     let mind = null;
+
+    // she only shoots the switch once a visit, never soon after the visitor
+    // chose a theme, and not at all once they've switched it back on her
+    const canFlipTheme = () => {
+      const fight = themeFight.current;
+      if (performance.now() < SETTLE_IN) return false;
+      if (fight.gaveUp || Date.now() - fight.visitorChoseAt < RESPECT_CHOICE) return false;
+      try {
+        if (sessionStorage.getItem(THEME_FLIP_KEY)) return false;
+      } catch {
+        // storage blocked: the other rules still apply
+      }
+      return Boolean(document.querySelector(".theme-menu > button"));
+    };
+    const flipTheme = () => {
+      const next = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+      Object.assign(themeFight.current, { flipTo: next, flipAt: Date.now() });
+      try {
+        sessionStorage.setItem(THEME_FLIP_KEY, next);
+      } catch {
+        // storage blocked: she won't remember after a reload, which is fine
+      }
+      remember(`shot the light/dark switch and turned on ${next} mode`);
+      changeTheme(next, document.querySelector(".theme-menu > button"));
+    };
+
+    const things = createThings({
+      layer: layer.current,
+      floor: floorLine,
+      onTouch: (name) => pixie.touchThing(name),
+    });
     const pixie = createPixie({
+      things,
+      canFlipTheme,
+      onThemeHit: flipTheme,
       root: root.current,
       canvas: canvas.current,
       say,
@@ -195,6 +238,7 @@ const PixieOnScreen = () => {
     engine.current = pixie;
     mind = createMind({
       engine: pixie,
+      canFlipTheme,
       isChatting: () => askingRef.current,
       events: () =>
         happenings.current
@@ -239,8 +283,21 @@ const PixieOnScreen = () => {
       }
     }, VITALS_EVERY);
 
+    // her things hide when switched off, or behind a full-screen window
+    const syncThings = () => {
+      const fullScreen = Object.values(useWindowStore.getState().windows).some(
+        (w) => w.isOpen && !w.isMinimized && w.isMaximized,
+      );
+      things.setHidden(fullScreen || !usePixieStore.getState().things);
+    };
+    syncThings();
+    const offSettings = usePixieStore.subscribe((state, previous) => {
+      if (state.things !== previous.things) syncThings();
+    });
+
     // remarks about apps being opened and the theme changing
     const offWindows = useWindowStore.subscribe((state, previous) => {
+      syncThings();
       Object.entries(state.windows).forEach(([id, window]) => {
         const before = previous.windows[id];
         if (window.isOpen && !before?.isOpen) {
@@ -258,8 +315,18 @@ const PixieOnScreen = () => {
     });
     const offTheme = useThemeStore.subscribe((state, previous) => {
       if (state.theme === previous.theme) return;
+      const fight = themeFight.current;
+      // her own slingshot shot: she has already said her piece
+      if (state.theme === fight.flipTo && Date.now() - fight.flipAt < 3000) return;
+      fight.visitorChoseAt = Date.now();
       remember(`switched the theme to ${state.theme}`);
       pixie.notice();
+      // the visitor changed it back after she flipped it: she lets it go
+      if (fight.flipTo && !fight.gaveUp) {
+        fight.gaveUp = true;
+        setTimeout(() => pixie.comment(YOU_WIN), 600);
+        return;
+      }
       // the page applies the theme a moment later
       setTimeout(
         () => pixie.comment(THEME_COMMENTS[document.documentElement.dataset.theme]),
@@ -275,9 +342,11 @@ const PixieOnScreen = () => {
       usePixieStore.setState({ vitals: null });
       offWindows();
       offTheme();
+      offSettings();
       pending.current?.abort();
       mind.destroy();
       pixie.destroy();
+      things.destroy();
       engine.current = null;
     };
   }, [say, think, remember, openChat]);
@@ -318,77 +387,80 @@ const PixieOnScreen = () => {
   }, [typing]);
 
   return (
-    <div ref={root} className="pixie">
-      {asking ? (
-        <div className="pixie-bubble chat" role="dialog" aria-label="Chat with Pixie">
-          <button type="button" className="pixie-close" onClick={closeChat} aria-label="Close chat">
-            <X size={14} strokeWidth={3} />
-          </button>
-          {thinking ? (
-            <p className="pixie-line">
-              <span className="pixie-dots" aria-hidden="true">
-                <i />
-                <i />
-                <i />
-              </span>
-              <span className="sr-only">Pixie is thinking</span>
-            </p>
-          ) : (
-            bubble && (
-              <p className="pixie-line">
-                <span aria-hidden="true">{bubble.text.slice(0, typed)}</span>
-                <span className="sr-only" role="status">
-                  {bubble.live ? "" : bubble.text}
-                </span>
-              </p>
-            )
-          )}
-          <form className="pixie-ask" onSubmit={submit}>
-            <input
-              ref={input}
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              onKeyDown={(e) => e.key === "Escape" && closeChat()}
-              maxLength={300}
-              placeholder="Ask me anything…"
-              aria-label="Your question for Pixie"
-              autoFocus
-            />
-            <button type="submit" disabled={busy || !question.trim()} aria-label="Send">
-              <Send size={14} strokeWidth={2.5} />
+    <>
+      <div ref={layer} className="pixie-things" />
+      <div ref={root} className="pixie">
+        {asking ? (
+          <div className="pixie-bubble chat" role="dialog" aria-label="Chat with Pixie">
+            <button type="button" className="pixie-close" onClick={closeChat} aria-label="Close chat">
+              <X size={14} strokeWidth={3} />
             </button>
-          </form>
-        </div>
-      ) : (
-        bubble && (
-          <button
-            key={bubble.id}
-            type="button"
-            className={clsx("pixie-bubble", bubble.kind === "thought" && "thought")}
-            onClick={dismiss}
-            title="Click to close"
-          >
-            <span aria-hidden="true">{bubble.text.slice(0, typed)}</span>
-            <span className="sr-only" role="status">
-              {bubble.text}
-            </span>
-          </button>
-        )
-      )}
-      <canvas
-        ref={canvas}
-        width={WIDTH * SCALE}
-        height={HEIGHT * SCALE}
-        className="pixie-sprite"
-        role="button"
-        tabIndex={0}
-        aria-label={
-          brainEnabled
-            ? "Pixie, your guide. Click her to ask a question."
-            : "Pixie, your guide. Click her for a tip."
-        }
-      />
-    </div>
+            {thinking ? (
+              <p className="pixie-line">
+                <span className="pixie-dots" aria-hidden="true">
+                  <i />
+                  <i />
+                  <i />
+                </span>
+                <span className="sr-only">Pixie is thinking</span>
+              </p>
+            ) : (
+              bubble && (
+                <p className="pixie-line">
+                  <span aria-hidden="true">{bubble.text.slice(0, typed)}</span>
+                  <span className="sr-only" role="status">
+                    {bubble.live ? "" : bubble.text}
+                  </span>
+                </p>
+              )
+            )}
+            <form className="pixie-ask" onSubmit={submit}>
+              <input
+                ref={input}
+                value={question}
+                onChange={(e) => setQuestion(e.target.value)}
+                onKeyDown={(e) => e.key === "Escape" && closeChat()}
+                maxLength={300}
+                placeholder="Ask me anything…"
+                aria-label="Your question for Pixie"
+                autoFocus
+              />
+              <button type="submit" disabled={busy || !question.trim()} aria-label="Send">
+                <Send size={14} strokeWidth={2.5} />
+              </button>
+            </form>
+          </div>
+        ) : (
+          bubble && (
+            <button
+              key={bubble.id}
+              type="button"
+              className={clsx("pixie-bubble", bubble.kind === "thought" && "thought")}
+              onClick={dismiss}
+              title="Click to close"
+            >
+              <span aria-hidden="true">{bubble.text.slice(0, typed)}</span>
+              <span className="sr-only" role="status">
+                {bubble.text}
+              </span>
+            </button>
+          )
+        )}
+        <canvas
+          ref={canvas}
+          width={WIDTH * SCALE}
+          height={HEIGHT * SCALE}
+          className="pixie-sprite"
+          role="button"
+          tabIndex={0}
+          aria-label={
+            brainEnabled
+              ? "Pixie, your guide. Click her to ask a question."
+              : "Pixie, your guide. Click her for a tip."
+          }
+        />
+      </div>
+    </>
   );
 };
 
