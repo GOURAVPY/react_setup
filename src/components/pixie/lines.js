@@ -50,3 +50,16 @@ export const THEME_COMMENTS = {
   dark: "Lights off! 🌙 So cosy.",
   light: "Good morning! ☀️",
 };
+
+// her AI brain (src/components/pixie/brain.js): the chat box in her bubble
+export const CHAT_INTRO = "Got a question about Gourav? Click me and ask! 💬";
+
+export const ASK = [
+  "What would you like to know? 💬",
+  "Ask me anything about Gourav! 💬",
+  "Curious about something? Ask away!",
+];
+
+export const BRAIN_TIRED = "Phew, that's a lot of questions! Let me rest a little 😅";
+
+export const BRAIN_DOWN = "Oops, my brain is napping 😴 Try again soon, or open Contact!";

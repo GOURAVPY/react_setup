@@ -25,8 +25,10 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
  * @param canvas  where she is drawn
  * @param say     shows a line (or a list of lines, in turn) in her bubble
  * @param chatty  returns whether she may share tips on her own
+ * @param onTap   called when she is clicked; returning true means it was
+ *                handled (her chat box opened), so she gives no tip
  */
-export const createPixie = ({ root, canvas, say, chatty }) => {
+export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
   const ctx = canvas.getContext("2d");
   const floor = () => window.innerHeight - FLOOR_GAP - H;
 
@@ -47,6 +49,7 @@ export const createPixie = ({ root, canvas, say, chatty }) => {
     squash: 1, // landing
     blinkIn: 3,
     talking: false,
+    busy: false, // chatting with a visitor: she stays put and listens
     tip: 0,
     lastActive: performance.now(),
     lastSpoke: performance.now(),
@@ -101,7 +104,7 @@ export const createPixie = ({ root, canvas, say, chatty }) => {
 
   const update = (dt, now) => {
     pet.time += dt;
-    const sleepy = now - pet.lastActive > SLEEP_AFTER;
+    const sleepy = !pet.busy && now - pet.lastActive > SLEEP_AFTER;
 
     pet.blinkIn -= dt;
     if (pet.blinkIn < -0.15) pet.blinkIn = between(2, 5);
@@ -112,7 +115,7 @@ export const createPixie = ({ root, canvas, say, chatty }) => {
         if (pet.pointerX !== null && Math.abs(pet.pointerX - (pet.x + W / 2)) < 350) {
           pet.facingLeft = pet.pointerX < pet.x + W / 2;
         }
-        if (pet.time > pet.length) (sleepy ? setMode("sit", 3) : chooseNext());
+        if (pet.time > pet.length && !pet.busy) (sleepy ? setMode("sit", 3) : chooseNext());
         break;
 
       case "walk": {
@@ -204,7 +207,7 @@ export const createPixie = ({ root, canvas, say, chatty }) => {
 
     // a tip now and then, when she is not busy and you are around
     const quiet = pet.mode === "idle" || pet.mode === "sit";
-    if (chatty() && quiet && !sleepy && now - pet.lastSpoke > pet.nextChat) {
+    if (chatty() && quiet && !sleepy && !pet.busy && now - pet.lastSpoke > pet.nextChat) {
       pet.nextChat = between(50_000, 80_000);
       speak(nextTip());
     }
@@ -254,7 +257,7 @@ export const createPixie = ({ root, canvas, say, chatty }) => {
 
     // keep the speech bubble on the screen near the edges
     const middle = pet.x + W / 2;
-    const half = 125;
+    const half = 135;
     const next = Math.round(
       clamp(middle, half + 8, window.innerWidth - half - 8) - middle,
     );
@@ -338,7 +341,7 @@ export const createPixie = ({ root, canvas, say, chatty }) => {
       }
       setMode("hop");
       puff("♥", "heart");
-      speak(nextTip());
+      if (!onTap?.()) speak(nextTip());
     }, DOUBLE_CLICK);
   };
 
@@ -355,7 +358,7 @@ export const createPixie = ({ root, canvas, say, chatty }) => {
     active();
     const now = performance.now();
     const free = pet.mode === "idle" || pet.mode === "sit" || pet.mode === "walk";
-    if (!free || now - lastHello < 20_000 || now - pet.lastSpoke < 5000) return;
+    if (!free || pet.busy || now - lastHello < 20_000 || now - pet.lastSpoke < 5000) return;
     lastHello = now;
     if (pet.pointerX !== null) pet.facingLeft = pet.pointerX < pet.x + W / 2;
     setMode("wave", 1.2);
@@ -367,7 +370,7 @@ export const createPixie = ({ root, canvas, say, chatty }) => {
     e.preventDefault();
     active();
     setMode("hop");
-    speak(nextTip());
+    if (!onTap?.()) speak(nextTip());
   };
 
   const listeners = [
@@ -430,7 +433,7 @@ export const createPixie = ({ root, canvas, say, chatty }) => {
     // a remark about something you did, if she is free and not chatting
     comment(text) {
       const now = performance.now();
-      if (!text || pet.mode === "held" || pet.mode === "sleep") return;
+      if (!text || pet.busy || pet.mode === "held" || pet.mode === "sleep") return;
       if (now - pet.lastComment < COMMENT_GAP) return;
       pet.lastComment = now;
       speak(text);
@@ -438,6 +441,18 @@ export const createPixie = ({ root, canvas, say, chatty }) => {
 
     setTalking(talking) {
       pet.talking = talking;
+    },
+
+    // while a visitor chats with her she stops wandering, napping and
+    // chattering, and stands still to listen
+    setBusy(busy) {
+      pet.busy = busy;
+      if (!busy) return;
+      active();
+      if (pet.mode === "walk" || pet.mode === "sit" || pet.mode === "sleep") {
+        pet.onArrive = null;
+        setMode("idle", 1);
+      }
     },
   };
 };
