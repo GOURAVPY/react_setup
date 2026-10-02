@@ -20,6 +20,20 @@ export const PALETTE = {
   R: "#ffd166", // bow
   F: "#6b3b2a", // shoes
   M: "#d6336c", // open mouth
+  // her things
+  O: "#c07a43", // wood
+  o: "#7d4a26", // dark wood
+  C: "#8fd0f5", // watering can
+  c: "#3f8cc4", // watering can shade
+  P: "#9d72ff", // book cover
+  p: "#6b45d6", // book shade
+  G: "#63c35b", // leaves
+  g: "#2f8a3a", // dark leaves, stems
+  T: "#e07a4f", // flower pot
+  t: "#a94a2c", // flower pot shade
+  k: "#5a3a28", // soil
+  y: "#e6dcef", // pillow shade
+  s: "#b9b2c8", // pebble
 };
 
 const PAD = 3; // the 16-pixel-wide body sits in the middle of the frame
@@ -70,6 +84,11 @@ const EYES = {
     [PAD + 4, 7, "KK....KK"],
     [PAD + 4, 8, "SS....SS"],
   ],
+  // looking down, at a book
+  down: [
+    [PAD + 4, 7, "SS....SS"],
+    [PAD + 4, 8, "EE....EE"],
+  ],
 };
 
 const MOUTH = {
@@ -113,6 +132,36 @@ const mirror = (pieces) =>
     [...text].reverse().join(""),
   ]);
 
+// holding a slingshot out in front, ready to shoot
+const SLINGSHOT_ARM = [
+  [15, 14, "KKKK"],
+  [15, 15, "SSSS"],
+  [15, 16, "KKKK"],
+  // the slingshot, gripped in her fist
+  [19, 9, "O.O"],
+  [19, 10, "O.O"],
+  [19, 11, "OOO"],
+  [20, 12, "o"],
+  [19, 13, "KoK"],
+  [19, 14, "KSK"],
+  [19, 15, "SSK"],
+  [19, 16, "KoK"],
+  [20, 17, "o"],
+];
+
+// holding a watering can low in front, tipped to pour
+const WATERING_ARM = [
+  [15, 15, "SK"],
+  [15, 16, "KSK"],
+  [16, 17, "KSK"],
+  [18, 15, "cc"],
+  [17, 16, "c..c"],
+  [16, 18, "KCCCK"],
+  [16, 19, "KCCCCc"],
+  [16, 20, "KcCCK.c"],
+  [17, 21, "KKK"],
+];
+
 // each pose: which arm pixels to clear, then which to paint
 const ARMS = {
   down: { off: [], on: [] },
@@ -122,9 +171,35 @@ const ARMS = {
     off: [...RIGHT_ARM_OFF, ...mirror(RIGHT_ARM_OFF)],
     on: [...RIGHT_ARM_UP, ...mirror(RIGHT_ARM_UP)],
   },
+  // the band pulled back to her cheek…
+  aim: { off: RIGHT_ARM_OFF, on: [...SLINGSHOT_ARM, [17, 9, "M."], [18, 10, "M"]] },
+  // …and let go
+  release: { off: RIGHT_ARM_OFF, on: [...SLINGSHOT_ARM, [20, 9, "M"]] },
+  water: { off: RIGHT_ARM_OFF, on: WATERING_ARM },
 };
 
-const build = ({ legs = "stand", eyes = "open", mouth = "smile", arms = "down" }) => {
+// things held in front of her, painted last
+const ITEMS = {
+  none: [],
+  book: [
+    [7, 15, "KKKKKKKK"],
+    [7, 16, "KPPPPPPK"],
+    [7, 17, "KPPDDPPK"],
+    [7, 18, "KPPPPPPK"],
+    [7, 19, "KpWWWWpK"],
+    [7, 20, "KKKKKKKK"],
+  ],
+};
+// the same book, with a page being turned
+ITEMS.page = [...ITEMS.book, [11, 13, "W"], [10, 14, "WWK"]];
+
+const build = ({
+  legs = "stand",
+  eyes = "open",
+  mouth = "smile",
+  arms = "down",
+  item = "none",
+}) => {
   const grid = Array.from({ length: HEIGHT }, () => Array(WIDTH).fill("."));
   const paint = (x, y, text) =>
     [...text].forEach((c, i) => {
@@ -148,6 +223,7 @@ const build = ({ legs = "stand", eyes = "open", mouth = "smile", arms = "down" }
   overlay(MOUTH[mouth]);
   overlay(ARMS[arms].off, erase);
   overlay(ARMS[arms].on);
+  overlay(ITEMS[item]);
 
   return grid;
 };
@@ -164,6 +240,12 @@ export const FRAMES = {
   happy: build({ arms: "up", eyes: "happy", mouth: "open" }),
   held: build({ arms: "up", mouth: "open", legs: "stepB" }),
   talk: build({ mouth: "open" }),
+  // with her things
+  aim: build({ arms: "aim", eyes: "happy" }),
+  release: build({ arms: "release", mouth: "open" }),
+  water: build({ arms: "water" }),
+  read: build({ legs: "sit", eyes: "down", item: "book" }),
+  readPage: build({ legs: "sit", eyes: "down", item: "page" }),
 };
 
 // draws a frame onto a canvas context, facing left or right
