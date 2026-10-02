@@ -29,9 +29,12 @@ const usePixieStore = create((set, get) => ({
   ...PIXIE_DEFAULTS,
   ...readStored(),
 
-  // what her mind last decided (not saved), shown in Settings › Pixie
+  // what her mind last decided, and a diary of her plans (not saved); shown
+  // in her app in the dock
   mood: null,
   thought: "",
+  diary: [], // [{ id, at, mood, thought, steps }], newest first
+  vitals: null, // { doing, energy, boredom }, kept up to date while she's out
 
   setPixie: (key, value) => {
     set({ [key]: value });
@@ -45,11 +48,27 @@ const usePixieStore = create((set, get) => ({
 }));
 
 // Anything can ask Pixie to come over and say hello (the terminal's
-// `pixie` command, the Settings button)
+// `pixie` command, the button in her app)
 export const callPixie = () => {
   usePixieStore.getState().setPixie("show", true);
   // a moment for her to appear if she was hidden
   setTimeout(() => window.dispatchEvent(new Event("pixie:call")), 50);
 };
+
+// …or come over and open her chat box
+export const chatWithPixie = () => {
+  usePixieStore.getState().setPixie("show", true);
+  setTimeout(() => window.dispatchEvent(new Event("pixie:chat")), 50);
+};
+
+const DIARY_PAGES = 30;
+let page = 0;
+
+export const writeDiary = (entry) =>
+  usePixieStore.setState((state) => ({
+    mood: entry.mood,
+    thought: entry.thought,
+    diary: [{ id: ++page, at: Date.now(), ...entry }, ...state.diary].slice(0, DIARY_PAGES),
+  }));
 
 export default usePixieStore;

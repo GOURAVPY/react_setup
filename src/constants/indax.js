@@ -73,6 +73,12 @@ const dockApps = [
     canOpen: true,
   },
   {
+    id: "pixie",
+    name: "Pixie",
+    icon: "pixie.svg",
+    canOpen: true,
+  },
+  {
     id: "settings",
     name: "Settings",
     icon: "settings.svg",
@@ -544,6 +550,13 @@ const WINDOW_CONFIG = {
     data: null,
   },
   arcade: {
+    isOpen: false,
+    isMaximized: false,
+    isMinimized: false,
+    zIndex: INITIAL_Z_INDEX,
+    data: null,
+  },
+  pixie: {
     isOpen: false,
     isMaximized: false,
     isMinimized: false,

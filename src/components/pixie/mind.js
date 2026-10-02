@@ -1,7 +1,7 @@
 import { askMind, brainEnabled } from "./brain";
 import { dockApps } from "../../constants/indax";
 import useWindowStore from "../../store/window";
-import usePixieStore from "../../store/pixie";
+import usePixieStore, { writeDiary } from "../../store/pixie";
 
 // Pixie's AI mind, on the page side: when she runs out of things to do it
 // describes the moment to the server (server/mind.js) and hands the plan
@@ -111,7 +111,7 @@ export const createMind = ({ engine, events, isChatting }) => {
       if (stopped || isChatting() || !usePixieStore.getState().mind) return;
       engine.setPlan(decision);
       lastPlan = decision.plan.map(describeStep);
-      usePixieStore.setState({ mood: decision.mood, thought: decision.thought });
+      writeDiary({ mood: decision.mood, thought: decision.thought, steps: lastPlan });
     } catch (error) {
       if (error.name === "AbortError") return;
       next = Date.now() + (error.status === 429 ? TIRED : BACK_OFF);

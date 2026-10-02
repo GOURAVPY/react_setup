@@ -12,6 +12,7 @@ import {
   Photos,
   Settings,
   Arcade,
+  PixieApp,
 } from "./windows";
 import {
   Navbar,
@@ -42,6 +43,7 @@ const App = () => {
       <Photos />
       <Settings />
       <Arcade />
+      <PixieApp />
       <Contact />
       <Home />
       <Login />

@@ -6,7 +6,6 @@ import {
   PanelBottom,
   Plus,
   RotateCcw,
-  Smile,
   Volume2,
   VolumeX,
 } from "lucide-react";
@@ -17,9 +16,8 @@ import useThemeStore, { changeTheme } from "../store/theme";
 import useWallpaperStore, { CUSTOM_ID, WALLPAPERS } from "../store/wallpaper";
 import useDockStore, { ICON_STYLES, MINIMIZE_EFFECTS } from "../store/dock";
 import useSoundStore, { playSound } from "../store/sound";
-import usePixieStore, { callPixie } from "../store/pixie";
-import { brainEnabled } from "../components/pixie/brain";
 import AppIcon from "../components/AppIcon";
+import Toggle from "../components/Toggle";
 
 const THEME_OPTIONS = [
   { value: "light", label: "Light" },
@@ -151,19 +149,6 @@ const WallpaperPane = () => {
     </div>
   );
 };
-
-const Toggle = ({ checked, onChange, label }) => (
-  <button
-    type="button"
-    role="switch"
-    aria-checked={checked}
-    aria-label={label}
-    className="switch"
-    onClick={() => onChange(!checked)}
-  >
-    <span />
-  </button>
-);
 
 const PREVIEW_APPS = [
   { id: "finder", image: "finder.png" },
@@ -311,84 +296,6 @@ const SoundPane = () => {
   );
 };
 
-const MOOD_FACES = {
-  happy: "😊",
-  curious: "🧐",
-  sleepy: "😴",
-  bored: "😐",
-  excited: "🤩",
-  shy: "☺️",
-};
-
-const PixiePane = () => {
-  const { show, chatty, mind, mood, thought, setPixie } = usePixieStore();
-  const thinking = brainEnabled && show && mind;
-
-  return (
-    <div className="pane">
-      <h3>Pixie</h3>
-      <p>The little guide who walks around the desktop and shows people how it works.</p>
-
-      <div className="setting-group">
-        <div className="setting-row">
-          <span>Show Pixie</span>
-          <Toggle
-            label="Show Pixie"
-            checked={show}
-            onChange={(value) => setPixie("show", value)}
-          />
-        </div>
-
-        <div className={clsx("setting-row", !show && "disabled")}>
-          <span>Share tips on her own</span>
-          <Toggle
-            label="Share tips on her own"
-            checked={chatty}
-            onChange={(value) => setPixie("chatty", value)}
-          />
-        </div>
-
-        <div className={clsx("setting-row", (!show || !brainEnabled) && "disabled")}>
-          <span>
-            Decides for herself (AI)
-            <small>
-              {brainEnabled
-                ? "Her AI mind picks where she goes and what she does."
-                : "Needs her AI brain; see server/README.md."}
-            </small>
-          </span>
-          <Toggle
-            label="Decides for herself"
-            checked={mind && brainEnabled}
-            onChange={(value) => setPixie("mind", value)}
-          />
-        </div>
-      </div>
-
-      {thinking && (
-        <div className="pixie-mind" aria-live="polite">
-          <span aria-hidden="true">{MOOD_FACES[mood] ?? "💭"}</span>
-          <p>
-            {thought ? (
-              <>
-                <strong>On her mind:</strong> “{thought}”
-                {mood && <small>Feeling {mood}</small>}
-              </>
-            ) : (
-              "She hasn't made a plan yet. Move around the page a little and she will."
-            )}
-          </p>
-        </div>
-      )}
-
-      <button type="button" className="restart" onClick={callPixie}>
-        <Smile size={14} />
-        Call Pixie
-      </button>
-    </div>
-  );
-};
-
 const AboutPane = () => (
   <div className="pane">
     <h3>About</h3>
@@ -413,7 +320,6 @@ const PANES = [
   { id: "wallpaper", label: "Wallpaper", icon: ImageIcon, pane: WallpaperPane },
   { id: "dock", label: "Dock", icon: PanelBottom, pane: DockPane },
   { id: "sound", label: "Sound", icon: Volume2, pane: SoundPane },
-  { id: "pixie", label: "Pixie", icon: Smile, pane: PixiePane },
   { id: "about", label: "About", icon: Info, pane: AboutPane },
 ];
 

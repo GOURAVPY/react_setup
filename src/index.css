@@ -602,7 +602,7 @@ body {
         }
     }
 
-    #settings {
+    :is(#settings, #pixie) {
         @apply w-2xl absolute top-24 left-3/12 bg-white shadow-2xl drop-shadow-2xl rounded-xl overflow-hidden;
 
         #window-header h2 {
@@ -852,6 +852,103 @@ body {
 
         .restart {
             @apply mt-6 flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium cursor-pointer bg-gray-100 border border-gray-200 hover:bg-gray-200;
+        }
+    }
+
+    /* Pixie's app: the Settings layout, with her portrait, mood and diary */
+    #pixie {
+        @apply top-20 left-[max(1rem,calc(50%-21rem))];
+
+        .portrait {
+            @apply flex-none;
+            image-rendering: pixelated;
+
+            /* whole multiples of her pixels, so she stays crisp */
+            &.large {
+                width: 132px;
+                height: 144px;
+            }
+
+            &.small {
+                width: 44px;
+                height: 48px;
+            }
+        }
+
+        .pixie-hero {
+            @apply flex items-center gap-5 pb-4 border-b border-gray-200;
+
+            p {
+                @apply mt-0.5 text-sm text-gray-500;
+            }
+
+            .mood {
+                @apply inline-flex items-center gap-1 mt-2 px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-50 border border-pink-200;
+            }
+        }
+
+        .meters {
+            @apply mt-5 space-y-2.5;
+        }
+
+        .meter {
+            @apply flex items-center gap-3 text-sm;
+
+            > span {
+                @apply w-16 text-gray-500;
+            }
+
+            > div {
+                @apply flex-1 h-2 rounded-full overflow-hidden bg-gray-200;
+            }
+
+            i {
+                @apply block h-full rounded-full transition-[width] duration-700;
+            }
+
+            .energy {
+                background: linear-gradient(90deg, #fbbf24, #34d399);
+            }
+
+            .boredom {
+                background: linear-gradient(90deg, #a78bfa, #f472b6);
+            }
+
+            b {
+                @apply w-8 text-right font-medium tabular-nums;
+            }
+        }
+
+        .actions {
+            @apply flex flex-wrap gap-2 mt-6;
+
+            .restart {
+                @apply mt-0;
+            }
+        }
+
+        .diary {
+            @apply mt-4 max-h-80 overflow-y-auto space-y-2 pr-1;
+
+            li {
+                @apply flex gap-3 p-3 rounded-lg text-sm bg-gray-50 border border-gray-200;
+            }
+
+            .face {
+                @apply text-xl leading-none;
+            }
+
+            p {
+                @apply italic;
+            }
+
+            small {
+                @apply block mt-1 text-xs text-gray-500;
+            }
+        }
+
+        .empty {
+            @apply mt-6 text-sm text-gray-500;
         }
     }
 
@@ -1460,7 +1557,7 @@ section.window-maximized {
         }
     }
 
-    #settings {
+    :is(#settings, #pixie) {
         #window-header h2 {
             padding: 0;
         }

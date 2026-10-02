@@ -26,6 +26,7 @@ const HISTORY = 8; // messages of the conversation she is reminded of
 const CHAT_TIMEOUT = 120_000; // ms of nobody chatting before the box closes
 const EVENTS_KEPT = 6; // recent happenings her mind is told about
 const EVENT_MEMORY = 5 * 60_000; // ms she remembers them for
+const VITALS_EVERY = 1500; // ms between updates of her energy etc. for her app
 
 const ago = (ms) => (ms < 60_000 ? `${Math.round(ms / 1000)}s ago` : `${Math.round(ms / 60_000)} min ago`);
 
@@ -222,6 +223,21 @@ const PixieOnScreen = () => {
 
     const onCall = () => pixie.call();
     window.addEventListener("pixie:call", onCall);
+    // the Chat button in her app: she comes over and opens her chat box
+    const onChat = () => {
+      pixie.call();
+      if (brainEnabled) openChat();
+    };
+    window.addEventListener("pixie:chat", onChat);
+
+    // how she's doing, for her app in the dock
+    const vitals = setInterval(() => {
+      const { doing, energy, boredom } = pixie.getState();
+      const last = usePixieStore.getState().vitals;
+      if (last?.doing !== doing || last?.energy !== energy || last?.boredom !== boredom) {
+        usePixieStore.setState({ vitals: { doing, energy, boredom } });
+      }
+    }, VITALS_EVERY);
 
     // remarks about apps being opened and the theme changing
     const offWindows = useWindowStore.subscribe((state, previous) => {
@@ -254,6 +270,9 @@ const PixieOnScreen = () => {
     return () => {
       clearInterval(waiting);
       window.removeEventListener("pixie:call", onCall);
+      window.removeEventListener("pixie:chat", onChat);
+      clearInterval(vitals);
+      usePixieStore.setState({ vitals: null });
       offWindows();
       offTheme();
       pending.current?.abort();

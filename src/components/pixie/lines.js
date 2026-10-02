@@ -43,6 +43,7 @@ export const APP_COMMENTS = {
   terminal: "The terminal! Type help to see what it can do.",
   arcade: "Game time! Arrow keys to move. Can you beat the high score?",
   settings: "Make yourself at home: wallpaper, icons, sounds, all here.",
+  pixie: "Hey, that's my room! Come in! 💕",
   resume: "Gourav's résumé! There's a download button at the top.",
 };
 

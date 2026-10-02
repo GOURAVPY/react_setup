@@ -34,12 +34,13 @@ const APPS = {
   settings: "settings",
   trash: "trash",
   arcade: "arcade",
+  pixie: "pixie",
   game: "arcade",
   pacman: "arcade",
 };
 
 const APP_NAMES =
-  "portfolio, articles, gallery, contact, resume, arcade, settings";
+  "portfolio, articles, gallery, contact, resume, arcade, pixie, settings";
 
 const THEMES = ["light", "dark", "system"];
 
