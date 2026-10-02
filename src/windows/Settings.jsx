@@ -18,6 +18,7 @@ import useWallpaperStore, { CUSTOM_ID, WALLPAPERS } from "../store/wallpaper";
 import useDockStore, { ICON_STYLES, MINIMIZE_EFFECTS } from "../store/dock";
 import useSoundStore, { playSound } from "../store/sound";
 import usePixieStore, { callPixie } from "../store/pixie";
+import { brainEnabled } from "../components/pixie/brain";
 import AppIcon from "../components/AppIcon";
 
 const THEME_OPTIONS = [
@@ -310,8 +311,18 @@ const SoundPane = () => {
   );
 };
 
+const MOOD_FACES = {
+  happy: "😊",
+  curious: "🧐",
+  sleepy: "😴",
+  bored: "😐",
+  excited: "🤩",
+  shy: "☺️",
+};
+
 const PixiePane = () => {
-  const { show, chatty, setPixie } = usePixieStore();
+  const { show, chatty, mind, mood, thought, setPixie } = usePixieStore();
+  const thinking = brainEnabled && show && mind;
 
   return (
     <div className="pane">
@@ -336,7 +347,39 @@ const PixiePane = () => {
             onChange={(value) => setPixie("chatty", value)}
           />
         </div>
+
+        <div className={clsx("setting-row", (!show || !brainEnabled) && "disabled")}>
+          <span>
+            Decides for herself (AI)
+            <small>
+              {brainEnabled
+                ? "Her AI mind picks where she goes and what she does."
+                : "Needs her AI brain; see server/README.md."}
+            </small>
+          </span>
+          <Toggle
+            label="Decides for herself"
+            checked={mind && brainEnabled}
+            onChange={(value) => setPixie("mind", value)}
+          />
+        </div>
       </div>
+
+      {thinking && (
+        <div className="pixie-mind" aria-live="polite">
+          <span aria-hidden="true">{MOOD_FACES[mood] ?? "💭"}</span>
+          <p>
+            {thought ? (
+              <>
+                <strong>On her mind:</strong> “{thought}”
+                {mood && <small>Feeling {mood}</small>}
+              </>
+            ) : (
+              "She hasn't made a plan yet. Move around the page a little and she will."
+            )}
+          </p>
+        </div>
+      )}
 
       <button type="button" className="restart" onClick={callPixie}>
         <Smile size={14} />

@@ -14,6 +14,26 @@ export const wakeBrain = () => {
 };
 
 /**
+ * Asks her mind what she wants to do next.
+ * @param snapshot  the moment: where she is, how she feels, what's going on
+ * @returns { mood, thought, plan }; throws an Error with .status when it can't
+ */
+export const askMind = async (snapshot, { signal } = {}) => {
+  const response = await fetch(`${API}/api/pixie/mind`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ snapshot }),
+    signal,
+  });
+  if (!response.ok) {
+    const error = new Error(`Pixie's mind answered ${response.status}`);
+    error.status = response.status;
+    throw error;
+  }
+  return response.json();
+};
+
+/**
  * Sends the conversation and streams back her answer.
  * @param messages  [{ role: "user" | "model", text }], ending with a question
  * @param onText    called with the answer so far, each time more arrives

@@ -4,6 +4,7 @@
 
 export const PROFILE = {
   name: "Gourav",
+  pronouns: "", // e.g. "he/him"; until then she says your name instead
   role: "", // e.g. "Frontend developer and computer science student"
   location: "", // e.g. "Delhi, India"
   availability: "", // e.g. "Open to internships and freelance work"

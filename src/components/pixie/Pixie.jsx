@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Send, X } from "lucide-react";
+import clsx from "clsx";
 import { WIDTH, HEIGHT, SCALE } from "./sprites";
 import { createPixie } from "./engine";
 import { askPixie, brainEnabled, wakeBrain } from "./brain";
+import { createMind } from "./mind";
 import {
   APP_COMMENTS,
   ASK,
@@ -22,6 +24,10 @@ const READ_TIME = 2600; // ms the finished line stays up, plus a little per lett
 const GREETED_KEY = "pixie-greeted";
 const HISTORY = 8; // messages of the conversation she is reminded of
 const CHAT_TIMEOUT = 120_000; // ms of nobody chatting before the box closes
+const EVENTS_KEPT = 6; // recent happenings her mind is told about
+const EVENT_MEMORY = 5 * 60_000; // ms she remembers them for
+
+const ago = (ms) => (ms < 60_000 ? `${Math.round(ms / 1000)}s ago` : `${Math.round(ms / 60_000)} min ago`);
 
 // her answers may end with [open:finder] to open an app for the visitor
 const ACTION = /\[open:([a-z]+)\]/gi;
@@ -43,7 +49,7 @@ const PixieOnScreen = () => {
   const canvas = useRef(null);
   const engine = useRef(null);
   const queue = useRef([]); // lines still to come after the current one
-  const [bubble, setBubble] = useState(null); // { text, id, live }
+  const [bubble, setBubble] = useState(null); // { text, id, live, kind }
   const [typed, setTyped] = useState(0);
 
   // the chat with her AI brain
@@ -54,6 +60,7 @@ const PixieOnScreen = () => {
   const history = useRef([]); // [{ role, text }]
   const pending = useRef(null); // AbortController of the answer on its way
   const input = useRef(null);
+  const happenings = useRef([]); // [{ text, at }] for her mind
 
   const say = useCallback((text) => {
     // while chatting, her own remarks would talk over the answers
@@ -63,6 +70,18 @@ const PixieOnScreen = () => {
     setBubble({ text: first, id: Math.random() });
     setTyped(0);
     playSound("chirp");
+  }, []);
+
+  // a thought bubble: what's on her mind, no sound
+  const think = useCallback((text) => {
+    if (askingRef.current) return;
+    queue.current = [];
+    setBubble({ text, id: Math.random(), kind: "thought" });
+    setTyped(0);
+  }, []);
+
+  const remember = useCallback((text) => {
+    happenings.current = [...happenings.current, { text, at: Date.now() }].slice(-EVENTS_KEPT);
   }, []);
 
   const dismiss = () => {
@@ -104,6 +123,7 @@ const PixieOnScreen = () => {
     if (!text || busy) return;
     setQuestion("");
     history.current.push({ role: "user", text });
+    remember(`asked you "${text.slice(0, 60)}"`);
 
     const id = Math.random();
     const controller = new AbortController();
@@ -155,11 +175,15 @@ const PixieOnScreen = () => {
 
   // her behaviour runs for as long as she is on screen
   useEffect(() => {
+    let mind = null;
     const pixie = createPixie({
       root: root.current,
       canvas: canvas.current,
       say,
+      think,
       chatty: () => usePixieStore.getState().chatty,
+      wantPlan: () => mind?.want(),
+      onEvent: remember,
       // a click opens the chat box when her brain is switched on
       onTap: () => {
         if (!brainEnabled) return false;
@@ -168,6 +192,14 @@ const PixieOnScreen = () => {
       },
     });
     engine.current = pixie;
+    mind = createMind({
+      engine: pixie,
+      isChatting: () => askingRef.current,
+      events: () =>
+        happenings.current
+          .filter(({ at }) => Date.now() - at < EVENT_MEMORY)
+          .map(({ text, at }) => `${text} (${ago(Date.now() - at)})`),
+    });
     pixie.start();
     wakeBrain();
 
@@ -194,13 +226,24 @@ const PixieOnScreen = () => {
     // remarks about apps being opened and the theme changing
     const offWindows = useWindowStore.subscribe((state, previous) => {
       Object.entries(state.windows).forEach(([id, window]) => {
-        if (window.isOpen && !previous.windows[id]?.isOpen) {
+        const before = previous.windows[id];
+        if (window.isOpen && !before?.isOpen) {
+          remember(`opened the ${id} window`);
+          pixie.notice();
           pixie.comment(APP_COMMENTS[id]);
+        } else if (!window.isOpen && before?.isOpen) {
+          remember(`closed the ${id} window`);
+        } else if (window.isMinimized && !before?.isMinimized) {
+          remember(`minimized the ${id} window`);
+        } else if (window.isMaximized && !before?.isMaximized) {
+          remember(`made the ${id} window full screen`);
         }
       });
     });
     const offTheme = useThemeStore.subscribe((state, previous) => {
       if (state.theme === previous.theme) return;
+      remember(`switched the theme to ${state.theme}`);
+      pixie.notice();
       // the page applies the theme a moment later
       setTimeout(
         () => pixie.comment(THEME_COMMENTS[document.documentElement.dataset.theme]),
@@ -214,10 +257,11 @@ const PixieOnScreen = () => {
       offWindows();
       offTheme();
       pending.current?.abort();
+      mind.destroy();
       pixie.destroy();
       engine.current = null;
     };
-  }, [say, openChat]);
+  }, [say, think, remember, openChat]);
 
   const length = bubble?.text.length ?? 0;
   const typing = Boolean(bubble) && typed < length;
@@ -301,7 +345,7 @@ const PixieOnScreen = () => {
           <button
             key={bubble.id}
             type="button"
-            className="pixie-bubble"
+            className={clsx("pixie-bubble", bubble.kind === "thought" && "thought")}
             onClick={dismiss}
             title="Click to close"
           >

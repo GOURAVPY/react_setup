@@ -4,19 +4,17 @@ import tailwindcss from '@tailwindcss/vite'
 import { resolve,dirname } from 'path';
 import { fileURLToPath } from "node:url";
 import { createPixieHandler } from './server/brain.js'
+import { createMindHandler } from './server/mind.js'
 
 // runs Pixie's brain inside the dev server, so `npm run dev` is all you need;
 // the key comes from GEMINI_API_KEY in your environment or in .env.local
 const pixieBrain = (env) => ({
   name: 'pixie-brain',
   configureServer(server) {
-    server.middlewares.use(
-      '/api/pixie',
-      createPixieHandler({
-        apiKey: env.GEMINI_API_KEY,
-        model: env.PIXIE_MODEL || undefined,
-      }),
-    )
+    const options = { apiKey: env.GEMINI_API_KEY, model: env.PIXIE_MODEL || undefined }
+    // the longer path first: '/api/pixie' would match it too
+    server.middlewares.use('/api/pixie/mind', createMindHandler(options))
+    server.middlewares.use('/api/pixie', createPixieHandler(options))
   },
 })
 

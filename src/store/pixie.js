@@ -8,6 +8,7 @@ const STORAGE_KEY = "pixie";
 export const PIXIE_DEFAULTS = {
   show: true,
   chatty: true, // shares a tip on her own now and then
+  mind: true, // her AI mind decides what she does next
 };
 
 const readStored = () => {
@@ -28,11 +29,15 @@ const usePixieStore = create((set, get) => ({
   ...PIXIE_DEFAULTS,
   ...readStored(),
 
+  // what her mind last decided (not saved), shown in Settings › Pixie
+  mood: null,
+  thought: "",
+
   setPixie: (key, value) => {
     set({ [key]: value });
-    const { show, chatty } = get();
+    const { show, chatty, mind } = get();
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ show, chatty }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ show, chatty, mind }));
     } catch {
       // storage can be blocked; the settings then last for this visit
     }

@@ -735,6 +735,23 @@ body {
             &.disabled {
                 @apply opacity-50;
             }
+
+            > span small {
+                @apply block mt-0.5 text-xs text-gray-500;
+            }
+        }
+
+        /* what Pixie's AI mind last decided */
+        .pixie-mind {
+            @apply mt-4 flex items-start gap-3 rounded-lg border border-pink-200 bg-pink-50 px-4 py-3 text-sm;
+
+            > span {
+                @apply text-2xl leading-none;
+            }
+
+            small {
+                @apply block mt-0.5 text-xs text-gray-500;
+            }
         }
 
         .slider {
@@ -976,6 +993,8 @@ section.window-maximized {
         --color-blue-100: #1d3a5f;
         --color-blue-600: #6ea8ff;
         --color-blue-700: #9cc4ff;
+        --color-pink-50: #3a2330;
+        --color-pink-200: #6b3651;
         color: #f0f0f0;
     }
 
@@ -1646,6 +1665,140 @@ section.window-maximized {
         border-right: 3px solid #2b1b2e;
         border-bottom: 3px solid #2b1b2e;
         transform: translate(-50%, -55%) rotate(45deg);
+    }
+
+    /* what's on her mind: a cloud with a trail of little bubbles */
+    &.thought {
+        font-style: italic;
+        color: #5b4a63;
+        background: #fbf7ff;
+        border-radius: 16px;
+
+        &::after {
+            width: 11px;
+            height: 11px;
+            background: #fbf7ff;
+            border: 3px solid #2b1b2e;
+            border-radius: 50%;
+            transform: translate(-50%, 4px);
+        }
+
+        &::before {
+            content: "";
+            position: absolute;
+            top: calc(100% + 18px);
+            left: calc(50% + 6px - var(--bubble-shift, 0px));
+            width: 6px;
+            height: 6px;
+            background: #fbf7ff;
+            border: 2px solid #2b1b2e;
+            border-radius: 50%;
+        }
+    }
+
+    /* with the chat box: her answer above, your question below */
+    &.chat {
+        width: 260px;
+        max-width: 260px;
+        padding: 9px 10px 10px 12px;
+        cursor: default;
+    }
+}
+
+.pixie-line {
+    margin: 0 20px 8px 0;
+    min-height: 1.45em;
+    max-height: 180px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.pixie-close {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    display: grid;
+    place-items: center;
+    width: 20px;
+    height: 20px;
+    color: #2b1b2e;
+    border-radius: 3px;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        background: #ffe3ee;
+    }
+}
+
+.pixie-ask {
+    display: flex;
+    gap: 6px;
+
+    & input {
+        flex: 1;
+        min-width: 0;
+        padding: 5px 8px;
+        font: 500 12px/1.4 var(--font-roboto);
+        color: #2b1b2e;
+        background: #fff7fa;
+        border: 2px solid #2b1b2e;
+        border-radius: 4px;
+        outline: none;
+
+        &::placeholder {
+            color: #9b8a95;
+        }
+
+        &:focus {
+            border-color: #ff6fa6;
+        }
+    }
+
+    & button {
+        display: grid;
+        place-items: center;
+        width: 30px;
+        flex: none;
+        color: #fff;
+        background: #ff6fa6;
+        border: 2px solid #2b1b2e;
+        border-radius: 4px;
+        cursor: pointer;
+
+        &:disabled {
+            opacity: 0.45;
+            cursor: default;
+        }
+    }
+}
+
+/* three blinking pixels while she thinks */
+.pixie-dots {
+    display: inline-flex;
+    gap: 4px;
+    padding: 5px 0;
+
+    & i {
+        width: 6px;
+        height: 6px;
+        background: #2b1b2e;
+        animation: pixie-dot 0.9s steps(2) infinite;
+
+        &:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        &:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+    }
+}
+
+@keyframes pixie-dot {
+    50% {
+        opacity: 0.2;
     }
 }
 

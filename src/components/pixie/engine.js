@@ -4,6 +4,11 @@ import * as LINES from "./lines";
 // Pixie's behaviour: where she is, what she is doing and how she reacts.
 // It moves her element directly every frame rather than through React, so
 // she costs nothing when nothing else on the page changes.
+//
+// What she does next comes from her AI mind when it is switched on: a short
+// plan of steps (walk somewhere, sit, think something…) that she carries out
+// in order. Without a plan she wanders about on her own. Clicks, drags and
+// falls are always handled here, straight away.
 
 const W = WIDTH * SCALE;
 const H = HEIGHT * SCALE;
@@ -15,6 +20,7 @@ const SLEEP_AFTER = 45_000; // ms with nobody using the page before she naps
 const COMMENT_GAP = 6000; // ms between remarks about what you are doing
 const DRAG_START = 6; // px the pointer moves before a press becomes a pick-up
 const DOUBLE_CLICK = 240; // ms to wait for a second click before acting on one
+const PLAN_STALE = 90_000; // ms before an unfinished plan is out of date
 
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 const between = (min, max) => min + Math.random() * (max - min);
@@ -25,10 +31,14 @@ const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
  * @param canvas  where she is drawn
  * @param say     shows a line (or a list of lines, in turn) in her bubble
  * @param chatty  returns whether she may share tips on her own
+ * @param think   shows a line in a thought bubble
  * @param onTap   called when she is clicked; returning true means it was
  *                handled (her chat box opened), so she gives no tip
+ * @param wantPlan  called when she has run out of plan; her mind may answer
+ *                  later through setPlan
+ * @param onEvent   told what the visitor did to her ("picked you up", …)
  */
-export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
+export const createPixie = ({ root, canvas, say, think, chatty, onTap, wantPlan, onEvent }) => {
   const ctx = canvas.getContext("2d");
   const floor = () => window.innerHeight - FLOOR_GAP - H;
 
@@ -50,6 +60,14 @@ export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
     blinkIn: 3,
     talking: false,
     busy: false, // chatting with a visitor: she stays put and listens
+    plan: [], // steps from her mind still to do
+    planAt: 0,
+    mood: "happy",
+    energy: between(70, 90), // 0-100: tires walking, recovers sitting and napping
+    boredom: 20, // 0-100: grows when nothing happens
+    lastTouched: null, // when the visitor last played with her
+    lookX: 0,
+    puffIn: 0,
     tip: 0,
     lastActive: performance.now(),
     lastSpoke: performance.now(),
@@ -64,9 +82,24 @@ export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
     pet.length = length;
   };
 
+  // a pause between things: short when a plan is waiting
+  const rest = (min, max) => setMode("idle", pet.plan.length ? 0.4 : between(min, max));
+
   const speak = (text) => {
     pet.lastSpoke = performance.now();
     say(text);
+  };
+
+  const muse = (text) => {
+    pet.lastSpoke = performance.now();
+    think?.(text);
+  };
+
+  // the visitor played with her
+  const touched = (what) => {
+    pet.lastTouched = performance.now();
+    pet.boredom = clamp(pet.boredom - 25, 0, 100);
+    onEvent?.(what);
   };
 
   const walkTo = (x, onArrive = null, speed = WALK_SPEED) => {
@@ -94,12 +127,84 @@ export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
 
   // ------------------------------------------------------------ choosing what to do
 
-  const chooseNext = () => {
+  // on her own: a little random, coloured by how she feels
+  const wander = () => {
     const roll = Math.random();
-    if (roll < 0.55) walkTo(between(16, window.innerWidth - W - 16));
+    if ((pet.energy < 25 || pet.mood === "sleepy") && roll < 0.5) {
+      setMode("sit", between(6, 12));
+      return;
+    }
+    const speed = pet.mood === "excited" ? TROT_SPEED * 0.7 : WALK_SPEED;
+    if (roll < 0.55) walkTo(between(16, window.innerWidth - W - 16), null, speed);
     else if (roll < 0.75) setMode("sit", between(4, 9));
     else if (roll < 0.85) setMode("wave", 1.4);
     else setMode("idle", between(2, 5));
+  };
+
+  // where a plan's target is on the floor: a side, the pointer, an open
+  // window or an icon in the dock
+  const resolveX = (to) => {
+    const at = (fraction) => clamp(fraction, 0, 1) * (window.innerWidth - W);
+    if (to === "left") return at(between(0.02, 0.15));
+    if (to === "right") return at(between(0.85, 0.98));
+    if (to === "center") return at(between(0.42, 0.58));
+    if (to === "pointer" && pet.pointerX !== null) return pet.pointerX - W / 2;
+
+    const [kind, id = ""] = String(to ?? "").split(":");
+    const element =
+      kind === "window"
+        ? document.getElementById(id)
+        : kind === "dock"
+          ? document.querySelector(`#dock [data-app="${CSS.escape(id)}"]`)
+          : null;
+    const rect = element?.getBoundingClientRect();
+    if (rect && rect.width > 0) return rect.left + rect.width * between(0.25, 0.75) - W / 2;
+    return at(Math.random());
+  };
+
+  const runStep = (step) => {
+    switch (step.do) {
+      case "walk":
+        walkTo(resolveX(step.to), null, step.pace === "trot" ? TROT_SPEED : WALK_SPEED);
+        break;
+      case "look":
+        pet.lookX = resolveX(step.to);
+        setMode("look", step.seconds ?? 3);
+        break;
+      case "sit":
+        setMode("sit", step.seconds ?? 6);
+        break;
+      case "nap":
+        setMode("sleep", step.seconds ?? 10);
+        break;
+      case "wave":
+        setMode("wave", 1.4);
+        break;
+      case "hop":
+        setMode("hop");
+        puff("♥", "heart");
+        break;
+      case "twirl":
+        setMode("twirl");
+        puff("✨", "sparkle");
+        break;
+      case "say":
+      case "think":
+        // with tips switched off she keeps her thoughts to herself
+        if (chatty()) (step.do === "say" ? speak : muse)(step.text);
+        setMode("idle", 1.5 + step.text.length * 0.05);
+        break;
+      default:
+        setMode("idle", step.seconds ?? 2);
+    }
+  };
+
+  const chooseNext = () => {
+    if (pet.plan.length && performance.now() - pet.planAt > PLAN_STALE) pet.plan = [];
+    const step = pet.plan.shift();
+    if (pet.plan.length === 0) wantPlan?.();
+    if (step) runStep(step);
+    else wander();
   };
 
   const update = (dt, now) => {
@@ -108,6 +213,15 @@ export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
 
     pet.blinkIn -= dt;
     if (pet.blinkIn < -0.15) pet.blinkIn = between(2, 5);
+
+    // needs: walking tires her, sitting and napping rest her; boredom grows
+    // unless something happens
+    const minutes = dt / 60;
+    const effort =
+      { sleep: 25, sit: 8, hop: -10, twirl: -10 }[pet.mode] ??
+      (pet.mode === "walk" ? (pet.speed > WALK_SPEED ? -8 : -4) : -1.5);
+    pet.energy = clamp(pet.energy + effort * minutes, 0, 100);
+    pet.boredom = clamp(pet.boredom + (pet.mode === "sleep" ? -5 : 5) * minutes, 0, 100);
 
     switch (pet.mode) {
       case "idle":
@@ -126,7 +240,7 @@ export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
           pet.x = pet.targetX;
           const arrive = pet.onArrive;
           pet.onArrive = null;
-          setMode("idle", between(1.5, 4));
+          rest(1.5, 4);
           arrive?.();
         } else {
           pet.x += Math.sign(gap) * step;
@@ -136,25 +250,34 @@ export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
 
       case "sit":
         if (sleepy) setMode("sleep");
-        else if (pet.time > pet.length) setMode("idle", between(1, 3));
+        else if (pet.time > pet.length) rest(1, 3);
         break;
 
       case "sleep":
-        if (pet.time > 1.4) {
-          pet.time = 0;
+        pet.puffIn -= dt;
+        if (pet.puffIn <= 0) {
+          pet.puffIn = 1.4;
           puff("z", "zzz");
         }
+        // a nap from her plan ends by itself; dozing off when nobody is
+        // around lasts until someone comes back
+        if (pet.length && pet.time > pet.length) rest(1, 2);
+        break;
+
+      case "look":
+        pet.facingLeft = pet.lookX < pet.x;
+        if (pet.time > pet.length) rest(1, 2);
         break;
 
       case "wave":
-        if (pet.time > pet.length) setMode("idle", between(1.5, 3));
+        if (pet.time > pet.length) rest(1.5, 3);
         break;
 
       case "hop":
         pet.lift = Math.sin(Math.PI * Math.min(1, pet.time / 0.45)) * 26;
         if (pet.time > 0.45) {
           pet.lift = 0;
-          setMode("idle", between(2, 4));
+          rest(2, 4);
         }
         break;
 
@@ -164,7 +287,7 @@ export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
         if (pet.time > 0.7) {
           pet.spin = 0;
           pet.lift = 0;
-          setMode("idle", between(2, 4));
+          rest(2, 4);
         }
         break;
 
@@ -189,7 +312,7 @@ export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
         pet.squash = 1 - 0.18 * Math.sin(Math.PI * Math.min(1, pet.time / 0.3));
         if (pet.time > 0.3) {
           pet.squash = 1;
-          setMode("idle", between(1.5, 3));
+          rest(1.5, 3);
         }
         break;
 
@@ -271,7 +394,9 @@ export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
 
   let frame = null;
   let last = 0;
+  let stopped = false;
   const loop = (now) => {
+    if (stopped) return;
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     update(dt, now);
@@ -313,6 +438,7 @@ export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
       pet.lift = 0;
       pet.spin = 0;
       setMode("held");
+      touched("picked you up");
       speak(pick(LINES.PICKED_UP));
     }
     pet.x = e.clientX - press.grabX;
@@ -328,6 +454,7 @@ export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
     if (pet.mode === "held") {
       pet.vy = 0;
       setMode("fall");
+      onEvent?.("dropped you");
       return;
     }
 
@@ -335,10 +462,12 @@ export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
     clearTimeout(clickTimer);
     clickTimer = setTimeout(() => {
       if (pet.mode === "sleep") {
+        touched("woke you up");
         setMode("wave", 1.2);
         speak(pick(LINES.WAKE));
         return;
       }
+      touched("clicked you");
       setMode("hop");
       puff("♥", "heart");
       if (!onTap?.()) speak(nextTip());
@@ -348,6 +477,7 @@ export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
   const onDoubleClick = () => {
     clearTimeout(clickTimer);
     active();
+    touched("double-clicked you for a twirl");
     setMode("twirl");
     puff("✨", "sparkle");
     speak(pick(LINES.TWIRL));
@@ -393,6 +523,7 @@ export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
     },
 
     destroy() {
+      stopped = true;
       cancelAnimationFrame(frame);
       clearTimeout(clickTimer);
       listeners.forEach(([target, type, fn]) => target.removeEventListener(type, fn));
@@ -443,11 +574,46 @@ export const createPixie = ({ root, canvas, say, chatty, onTap }) => {
       pet.talking = talking;
     },
 
+    // a plan from her mind: { mood, plan: [{ do, to, pace, seconds, text }] }
+    setPlan({ mood, plan }) {
+      if (pet.busy) return;
+      pet.mood = mood ?? pet.mood;
+      pet.plan = plan.slice();
+      pet.planAt = performance.now();
+      // starts straight away if she is only standing about
+      if (pet.mode === "idle") pet.length = Math.min(pet.length, pet.time + 0.3);
+    },
+
+    // something happened on the page worth noticing
+    notice() {
+      pet.boredom = clamp(pet.boredom - 15, 0, 100);
+    },
+
+    // how she is and where, for her mind
+    getState() {
+      const now = performance.now();
+      return {
+        x: (pet.x + W / 2) / window.innerWidth,
+        doing: pet.mode,
+        mood: pet.mood,
+        energy: Math.round(pet.energy),
+        boredom: Math.round(pet.boredom),
+        secondsSinceVisitorPlayedWithYou:
+          pet.lastTouched === null ? "never" : Math.round((now - pet.lastTouched) / 1000),
+        visitorIdleSeconds: Math.round((now - pet.lastActive) / 1000),
+        pointerX: pet.pointerX === null ? null : pet.pointerX / window.innerWidth,
+      };
+    },
+
     // while a visitor chats with her she stops wandering, napping and
     // chattering, and stands still to listen
     setBusy(busy) {
       pet.busy = busy;
+      // no tip straight after a chat
+      pet.lastSpoke = performance.now();
       if (!busy) return;
+      touched("started chatting with you");
+      pet.plan = [];
       active();
       if (pet.mode === "walk" || pet.mode === "sit" || pet.mode === "sleep") {
         pet.onArrive = null;
