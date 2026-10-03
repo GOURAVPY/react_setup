@@ -70,6 +70,8 @@ const REFUSES = [
   "monkeytype.com",
   "lichess.org",
   "neal.fun",
+  "news.ycombinator.com",
+  "flightradar24.com",
 ];
 
 const hostOf = (url) => url.hostname.replace(/^www\./, "").toLowerCase();
@@ -195,10 +197,7 @@ export const SITES = [
   { group: "Explore", name: "Videos", url: videoSearchUrl("trending videos"), host: "bing.com" },
   { group: "Explore", name: "Radio Garden", url: "https://radio.garden" },
   { group: "Explore", name: "Live wind map", url: "https://earth.nullschool.net" },
-  { group: "Explore", name: "Flights live", url: "https://www.flightradar24.com" },
   { group: "Explore", name: "Open Library", url: "https://openlibrary.org" },
-  { group: "Explore", name: "Khan Academy", url: "https://www.khanacademy.org" },
-  { group: "Explore", name: "Hacker News", url: "https://news.ycombinator.com" },
   { group: "Explore", name: "Internet Archive", url: "https://archive.org" },
   {
     group: "Explore",
