@@ -209,9 +209,26 @@ body {
             height: min(560px, calc(100vh - 15rem));
         }
 
-        iframe.page {
-            @apply border-0;
-            background: #fff;
+        /* a site, with a note above it when it might not show */
+        .framed {
+            @apply flex flex-col bg-white;
+
+            iframe {
+                @apply block w-full flex-1 min-h-0 border-0;
+                background: #fff;
+            }
+        }
+
+        .frame-hint {
+            @apply flex flex-none items-center justify-center gap-2 px-4 py-1.5 text-xs text-gray-500 bg-gray-50 border-b border-gray-200;
+
+            a {
+                @apply inline-flex items-center gap-1 font-medium text-blue-600 hover:underline;
+            }
+        }
+
+        .checking {
+            @apply flex items-center justify-center gap-2 text-sm text-gray-500 bg-white;
         }
 
         .start {
@@ -243,7 +260,8 @@ body {
         }
 
         .tiles {
-            @apply grid grid-cols-5 gap-3;
+            @apply grid gap-2;
+            grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
 
             button {
                 @apply flex flex-col items-center gap-2 w-full p-3 rounded-xl text-xs font-medium text-gray-700 cursor-pointer hover:bg-gray-100;

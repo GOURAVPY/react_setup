@@ -14,11 +14,22 @@ import {
 import { Windowcontrols } from "../components";
 import WindowWrapper from "../hoc/Windowwappre";
 import useWindowStore from "../store/window";
-import { SITES, faviconOf, hostName, resolveInput, resolvePage } from "./browser";
+import { serverEnabled, serverUrl } from "../components/pixie/brain";
+import {
+  SITES,
+  SITE_GROUPS,
+  faviconOf,
+  hostName,
+  isSearchHome,
+  resolveInput,
+  resolvePage,
+} from "./browser";
 
 // A browser that really browses: type an address or a search, and the page
-// loads inside the window. Sites that refuse to be shown in a frame get an
-// "open in a new tab" page instead. "" in the history is the start page.
+// loads inside the window. Before showing a site it doesn't know, it asks the
+// server (server/frameCheck.js) whether the site allows being shown inside
+// another page; sites that refuse get an "open in a new tab" page instead of
+// the browser's broken-page error. "" in the history is the start page.
 
 const HOME = "";
 const RECENTS_KEY = "browser-recents";
@@ -48,6 +59,7 @@ const Safari = () => {
   const [nav, setNav] = useState({ stack: [HOME], at: 0 });
   const current = nav.stack[nav.at];
   const page = current ? resolvePage(current) : null;
+  const pageUrl = page?.url ?? null;
 
   // what's typed in the address bar, until the page changes
   const [typed, setTyped] = useState({ at: current, text: current });
@@ -58,8 +70,36 @@ const Safari = () => {
   const [recents, setRecents] = useState(readRecents);
   const input = useRef(null);
 
-  const go = (href) => {
-    if (href == null) return;
+  // the server's answers: page address -> true (allowed), false (refused),
+  // null (couldn't tell)
+  const [verdicts, setVerdicts] = useState({});
+  const needsCheck = Boolean(page && !page.blocked && !page.trusted && serverEnabled);
+  const verdict = pageUrl ? verdicts[pageUrl] : undefined;
+  const checking = needsCheck && verdict === undefined;
+  const blocked = Boolean(page && (page.blocked || verdict === false));
+
+  useEffect(() => {
+    if (!needsCheck || verdict !== undefined) return;
+    const controller = new AbortController();
+    fetch(serverUrl(`/api/frame-check?url=${encodeURIComponent(pageUrl)}`), {
+      signal: controller.signal,
+    })
+      .then((response) => (response.ok ? response.json() : { embeddable: null }))
+      .then(
+        (answer) => setVerdicts((all) => ({ ...all, [pageUrl]: answer.embeddable ?? null })),
+        () => {
+          // the server is away: try the page anyway
+          if (!controller.signal.aborted) setVerdicts((all) => ({ ...all, [pageUrl]: null }));
+        },
+      );
+    return () => controller.abort();
+  }, [pageUrl, needsCheck, verdict]);
+
+  const go = (target) => {
+    if (target == null) return;
+    // Google's and Bing's front pages refuse to be framed: the start page
+    // has its own search box
+    const href = isSearchHome(target) ? HOME : target;
     setNav(({ stack, at }) => ({ stack: [...stack.slice(0, at + 1), href], at: at + 1 }));
     setLoading(href !== HOME && !resolvePage(href).blocked);
     if (href !== HOME) {
@@ -85,7 +125,7 @@ const Safari = () => {
   };
 
   const reload = () => {
-    if (!page || page.blocked) return;
+    if (!page || blocked) return;
     setReloads((n) => n + 1);
     setLoading(true);
   };
@@ -113,6 +153,9 @@ const Safari = () => {
 
   const canGoBack = nav.at > 0;
   const canGoForward = nav.at < nav.stack.length - 1;
+  const spinning = checking || (loading && !blocked);
+  // no answer from the server: the page might still turn out empty
+  const unsure = Boolean(page && !blocked && !checking && !page.trusted && verdict !== true);
 
   return (
     <>
@@ -126,15 +169,15 @@ const Safari = () => {
           <button type="button" onClick={() => step(1)} disabled={!canGoForward} aria-label="Forward">
             <ChevronRight className="icon" />
           </button>
-          <button type="button" onClick={reload} disabled={!page || page.blocked} aria-label="Reload">
+          <button type="button" onClick={reload} disabled={!page || blocked} aria-label="Reload">
             <RotateCw className="icon" />
           </button>
         </div>
 
         <form className="address" onSubmit={submit}>
-          {loading ? (
+          {spinning ? (
             <Loader2 className="icon spin" aria-label="Loading" />
-          ) : page?.blocked ? (
+          ) : blocked ? (
             <ShieldAlert className="icon" />
           ) : page ? (
             <Lock className="icon" />
@@ -186,20 +229,24 @@ const Safari = () => {
             />
           </form>
 
-          <h3>Sites that work in here</h3>
-          <ul className="tiles">
-            {SITES.map(({ name, url, host }) => (
-              <li key={url}>
-                <button type="button" onClick={() => go(url)}>
-                  <SiteIcon host={host ?? hostName(url)} name={name} />
-                  <span>{name}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
+          {SITE_GROUPS.map((group) => (
+            <section key={group}>
+              <h3>{group}</h3>
+              <ul className="tiles">
+                {SITES.filter((site) => site.group === group).map(({ name, url, host }) => (
+                  <li key={url}>
+                    <button type="button" onClick={() => go(url)}>
+                      <SiteIcon host={host ?? hostName(url)} name={name} />
+                      <span>{name}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
 
           {recents.length > 0 && (
-            <>
+            <section>
               <h3>Recent</h3>
               <ul className="recents">
                 {recents.map((url) => (
@@ -211,38 +258,52 @@ const Safari = () => {
                   </li>
                 ))}
               </ul>
-            </>
+            </section>
           )}
 
           <p className="hint">
-            Google, GitHub and some other big sites only open in their own tab. YouTube videos play
-            here.
+            YouTube videos, GitHub repositories and Spotify links open in here. Many big sites,
+            like Google, LinkedIn and Instagram, only open in their own tab.
           </p>
         </div>
-      ) : page.blocked ? (
+      ) : blocked ? (
         <div className="page blocked">
           <Globe size={40} strokeWidth={1.5} />
           <h3>{page.host} won&apos;t open in here</h3>
-          <p>Some sites only allow themselves to be shown in their own tab.</p>
+          <p>This site only allows itself to be shown in its own tab.</p>
           <a href={current} target="_blank" rel="noopener noreferrer">
             Open in a new tab <ExternalLink size={14} />
           </a>
         </div>
+      ) : checking ? (
+        <div className="page checking" aria-live="polite">
+          <Loader2 className="spin" size={22} />
+          <span>Opening {page.host}…</span>
+        </div>
       ) : (
-        <iframe
-          key={`${page.url}#${reloads}`}
-          className="page"
-          src={page.url}
-          title={page.host}
-          onLoad={() => setLoading(false)}
-          // no allow-top-navigation: a framed page can't take over the portfolio
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
-          allowFullScreen
-          // sites see only that the portfolio is showing them; YouTube won't
-          // play embedded videos without that (error 153)
-          referrerPolicy="strict-origin-when-cross-origin"
-        />
+        <div className="page framed">
+          {unsure && (
+            <p className="frame-hint">
+              Page stays empty? {page.host} may not allow being shown here.
+              <a href={current} target="_blank" rel="noopener noreferrer">
+                Open in a new tab <ExternalLink size={12} />
+              </a>
+            </p>
+          )}
+          <iframe
+            key={`${page.url}#${reloads}`}
+            src={page.url}
+            title={page.host}
+            onLoad={() => setLoading(false)}
+            // no allow-top-navigation: a framed page can't take over the portfolio
+            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-presentation allow-modals allow-downloads allow-pointer-lock"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
+            allowFullScreen
+            // sites see only that the portfolio is showing them; YouTube won't
+            // play embedded videos without that (error 153)
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+        </div>
       )}
     </>
   );
