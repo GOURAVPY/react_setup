@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Download } from "lucide-react";
 import { Windowcontrols } from "../components";
 import WindowWrapper from "../hoc/Windowwappre";
@@ -12,6 +13,8 @@ pdfjs.GlobalWorkerOptions.workerSrc = new URL(
 ).toString();
 
 const Resume = () => {
+  const [pageCount, setPageCount] = useState(1);
+
   return (
     <>
       <div id="window-header">
@@ -27,8 +30,11 @@ const Resume = () => {
           <Download className="icon" />{" "}
         </a>
       </div>
-      <Document file="files/resume.pdf">
-        <Page pageNumber={1} renderTextlayer renderAnnotationLayer />
+      {/* every page of the résumé, one under the other */}
+      <Document file="files/resume.pdf" onLoadSuccess={({ numPages }) => setPageCount(numPages)}>
+        {Array.from({ length: pageCount }, (_, i) => (
+          <Page key={i} pageNumber={i + 1} renderTextLayer renderAnnotationLayer />
+        ))}
       </Document>
     </>
   );
