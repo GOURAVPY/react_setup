@@ -1,6 +1,7 @@
 import http from "node:http";
 import { createPixieHandler } from "./brain.js";
 import { createMindHandler } from "./mind.js";
+import { createFrameCheckHandler } from "./frameCheck.js";
 
 // Pixie's brain as its own small web service, for when the site itself is
 // hosted as static files (Render Static Site). Settings come from the
@@ -29,12 +30,15 @@ const mind = createMindHandler({
   ...options,
   dailyLimit: Number(process.env.PIXIE_MIND_DAILY) || undefined,
 });
+// the Browser app: may this site be shown inside another page?
+const frameCheck = createFrameCheckHandler({ allowedOrigins: options.allowedOrigins });
 
 const server = http.createServer((req, res) => {
   const path = (req.url ?? "").split("?")[0];
   if (path === "/api/pixie") return chat(req, res);
   if (path === "/api/pixie/mind") return mind(req, res);
   // the site pings this on load, so a sleeping free server wakes up in time
+  if (path === "/api/frame-check") return frameCheck(req, res);
   if (path === "/api/health" || path === "/") {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.end("ok");

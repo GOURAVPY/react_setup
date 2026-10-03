@@ -8,6 +8,10 @@ const API = (import.meta.env.VITE_PIXIE_API ?? "").replace(/\/$/, "");
 
 export const brainEnabled = import.meta.env.DEV || Boolean(API);
 
+// the same small server also answers the Browser app (server/frameCheck.js)
+export const serverEnabled = brainEnabled;
+export const serverUrl = (path) => `${API}${path}`;
+
 // a free server sleeps when unused; knocking on page load wakes it in time
 export const wakeBrain = () => {
   if (API) fetch(`${API}/api/health`, { mode: "no-cors" }).catch(() => {});
