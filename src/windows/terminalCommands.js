@@ -24,8 +24,10 @@ const line = (text, tone) => ({ text, tone });
 const APPS = {
   portfolio: "finder",
   finder: "finder",
+  browser: "safari",
+  web: "safari",
+  internet: "safari",
   articles: "safari",
-  blog: "safari",
   safari: "safari",
   gallery: "photos",
   photos: "photos",
@@ -40,7 +42,7 @@ const APPS = {
 };
 
 const APP_NAMES =
-  "portfolio, articles, gallery, contact, resume, arcade, pixie, settings";
+  "portfolio, browser, gallery, contact, resume, arcade, pixie, settings";
 
 const THEMES = ["light", "dark", "system"];
 

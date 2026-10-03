@@ -156,45 +156,141 @@ body {
     }
 
     #safari {
-        @apply w-4xl absolute top-40 left-2/12 bg-white shadow-2xl drop-shadow-2xl rounded-xl overflow-hidden;
+        @apply w-4xl max-w-[calc(100vw-2rem)] absolute top-24 left-[max(1rem,calc(50%-28rem))] bg-white shadow-2xl drop-shadow-2xl rounded-xl overflow-hidden;
 
-        .search {
-            @apply flex items-center gap-3 w-2/3 bg-white border border-gray-300 rounded-lg px-3 py-2;
+        /* the toolbar lives in the title bar (the traffic lights keep their own look) */
+        #window-header {
+            @apply gap-3;
 
-            input {
-                @apply placeholder:text-gray-400;
+            .nav button,
+            .tools button,
+            .tools a {
+                @apply flex-center size-7 rounded-md text-gray-500 cursor-pointer hover:bg-gray-200 hover:text-gray-800;
+
+                &:disabled,
+                &.disabled {
+                    @apply opacity-35 cursor-default hover:bg-transparent hover:text-gray-500;
+                }
             }
         }
 
-        .blog {
-            @apply bg-white p-10 max-w-3xl mx-auto;
+        .nav,
+        .tools {
+            @apply flex items-center gap-0.5;
+        }
 
-            h2 {
-                @apply text-xl font-bold text-pink-600 mb-10;
+        .nav {
+            @apply ml-8;
+        }
+
+        .address {
+            @apply flex flex-1 items-center gap-2 max-w-2xl mx-auto bg-gray-100 border border-gray-200 rounded-lg px-3 py-1.5;
+
+            &:focus-within {
+                @apply border-blue-400;
             }
 
-            .blog-post {
-                @apply grid grid-cols-12 space-x-5;
+            .icon {
+                @apply flex-none;
+            }
 
-                img {
-                    @apply size-full rounded-md object-cover;
+            input {
+                @apply flex-1 min-w-0 text-sm text-gray-800 placeholder:text-gray-400 outline-none bg-transparent;
+            }
+        }
+
+        .spin {
+            @apply animate-spin;
+        }
+
+        /* the page area: a site, the start page or the "won't open" page */
+        .page {
+            @apply block w-full;
+            height: min(560px, calc(100vh - 15rem));
+        }
+
+        iframe.page {
+            @apply border-0;
+            background: #fff;
+        }
+
+        .start {
+            @apply overflow-y-auto px-10 py-8 bg-white;
+
+            h3 {
+                @apply mt-8 mb-3 text-xs font-semibold uppercase tracking-wide text-gray-400;
+            }
+        }
+
+        .big-search {
+            @apply flex items-center gap-3 max-w-xl mx-auto mt-6 px-4 py-3 rounded-full bg-gray-100 border border-gray-200 text-gray-500;
+
+            &:focus-within {
+                @apply border-blue-400 bg-white;
+            }
+
+            input {
+                @apply flex-1 min-w-0 text-sm text-gray-800 placeholder:text-gray-400 outline-none bg-transparent;
+            }
+        }
+
+        .site-icon {
+            @apply relative flex-center size-10 flex-none rounded-xl bg-gray-100 text-gray-500 font-semibold;
+
+            img {
+                @apply absolute inset-2 size-6 rounded;
+            }
+        }
+
+        .tiles {
+            @apply grid grid-cols-5 gap-3;
+
+            button {
+                @apply flex flex-col items-center gap-2 w-full p-3 rounded-xl text-xs font-medium text-gray-700 cursor-pointer hover:bg-gray-100;
+
+                .site-icon {
+                    @apply size-14 rounded-2xl text-lg;
+
+                    img {
+                        @apply inset-3 size-8;
+                    }
+                }
+            }
+        }
+
+        .recents {
+            @apply space-y-1;
+
+            button {
+                @apply flex items-center gap-3 w-full px-2 py-1.5 rounded-lg text-sm text-gray-700 cursor-pointer hover:bg-gray-100;
+
+                .site-icon {
+                    @apply size-7 rounded-md text-xs;
+
+                    img {
+                        @apply inset-1.5 size-4;
+                    }
                 }
 
-                .content {
-                    @apply col-span-10 space-y-3;
-
-                    p {
-                        @apply text-xs text-gray-500;
-                    }
-
-                    h3 {
-                        @apply font-semibold text-base text-gray-800;
-                    }
-
-                    a {
-                        @apply text-blue-600 text-xs hover:underline flex items-center gap-3;
-                    }
+                span {
+                    @apply truncate;
                 }
+            }
+        }
+
+        .hint {
+            @apply mt-8 text-xs text-gray-400 text-center;
+        }
+
+        .blocked {
+            @apply flex flex-col items-center justify-center gap-3 px-10 text-center bg-white text-gray-500;
+
+            h3 {
+                @apply mt-2 text-lg font-semibold text-gray-800;
+            }
+
+            a {
+                @apply inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600;
             }
         }
     }
@@ -1039,6 +1135,13 @@ section.window-maximized {
     }
 }
 
+/* maximized: the page fills the window */
+#safari.window-maximized .page {
+    flex: 1;
+    min-height: 0;
+    height: auto;
+}
+
 /* maximized: the game fills the window (it scales itself to fit) */
 #arcade.window-maximized iframe {
     width: 100%;
@@ -1504,19 +1607,28 @@ section.window-maximized {
 
     #safari {
         #window-header {
-            > svg,
-            > div:not(.flex-1),
-            .flex-1 > svg {
+            @apply gap-1.5;
+
+            .nav button:last-child,
+            .tools {
                 display: none;
             }
 
-            .search {
-                width: 100%;
+            .nav {
+                margin-left: 0;
             }
         }
 
-        .blog {
-            padding: 1.5rem 1.25rem;
+        .page {
+            height: calc(100dvh - 7.5rem);
+        }
+
+        .start {
+            padding: 1.25rem 1rem;
+        }
+
+        .tiles {
+            grid-template-columns: repeat(3, 1fr);
         }
     }
 

@@ -17,6 +17,7 @@ export const TIPS = [
   "Settings lets you change the wallpaper, theme, icons and sounds.",
   "The switch at the top right of the menu bar flips light and dark mode.",
   "Need a break? Arcade has a whole Pac-Man game inside!",
+  "The Browser really browses: try Wikipedia, or search for anything.",
   "Contact has every way to reach Gourav. Say hi!",
   "You can pick me up and drop me anywhere. Wheee!",
   "Double-click me for a little twirl ✨",
@@ -40,7 +41,7 @@ export const CALLED = ["You called? ✨", "I'm here! What's up?"];
 // said when an app opens (one at most every few seconds)
 export const APP_COMMENTS = {
   finder: "That's the portfolio. Projects are in the Work folder!",
-  safari: "Ooh, articles! Good reading in there.",
+  safari: "A real browser! Try Wikipedia, or search for something.",
   photos: "The gallery! Click a photo to see it big.",
   contact: "Want to work together? All the links are here!",
   terminal: "The terminal! Type help to see what it can do.",

@@ -132,7 +132,8 @@ const createGenie = (el, target, side = "bottom") => {
       width: `${box.width}px`,
       height: `${box.height}px`,
       objectFit: "contain",
-      background: "#000",
+      // a page from another site can't be pictured: a box in its colour
+      background: getComputedStyle(frames[i]).backgroundColor || "#000",
     });
     try {
       const canvas = frames[i].contentDocument?.querySelector("canvas");
