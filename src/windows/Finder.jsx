@@ -104,7 +104,7 @@ const Finder = () => {
       <div className=" bg-white flex h-full">
         <div className="sidebar">
           {renderList("Favorites", Object.values(locations))}
-          {renderList("work", locations.work.children)}
+          {renderList("Projects", locations.work.children)}
         </div>
         {term ? (
           <div className="results">

@@ -26,7 +26,7 @@ const APP_WORDS = {
   trash: "trash bin deleted",
 };
 
-const SECTIONS = ["Apps", "Projects", "Skills", "Documents", "Links"];
+const SECTIONS = ["Apps", "Projects", "Work", "Skills", "Documents", "Links"];
 const PER_SECTION = 5;
 
 const firstSentence = (text = "") => text.match(/^.*?[.!?](\s|$)/)?.[0].trim() ?? text;
@@ -54,20 +54,27 @@ const apps = dockApps.map(({ id, name, icon }) =>
   }),
 );
 
-const projects = locations.work.children.map((project) => {
-  const about = project.children?.find(({ fileType }) => fileType === "txt");
-  const description = about?.description ?? [];
-  return entry({
-    id: `project-${project.id}`,
-    section: "Projects",
-    title: project.name,
-    subtitle: firstSentence(description[0]) || "Project",
-    words: "project",
-    text: description.join(" "),
-    icon: { src: "/images/folder.png" },
-    action: { type: "folder", location: project },
+// project folders: my own, and the company work from my job
+const folders = (location, section, words) =>
+  location.children.map((project) => {
+    const about = project.children?.find(({ fileType }) => fileType === "txt");
+    const description = about?.description ?? [];
+    return entry({
+      id: `project-${project.id}`,
+      section,
+      title: project.name,
+      subtitle: firstSentence(description[0]) || "Project",
+      words,
+      text: description.join(" "),
+      icon: { src: "/images/folder.png" },
+      action: { type: "folder", location: project },
+    });
   });
-});
+
+const projects = folders(locations.work, "Projects", "project");
+const work = locations.company
+  ? folders(locations.company, "Work", "project work job company app building studio")
+  : [];
 
 const skills = techStack.flatMap(({ category, items }) =>
   items.map((skill) =>
@@ -123,11 +130,12 @@ const links = socials.map(({ id, text, icon, bg, link }) =>
   }),
 );
 
-const EVERYTHING = [...apps, ...projects, ...skills, ...documents, ...links];
+const EVERYTHING = [...apps, ...projects, ...work, ...skills, ...documents, ...links];
 
 // shown before anything is typed: what a recruiter most likely wants
 const SUGGESTIONS = [
   documents[0],
+  ...work,
   ...projects,
   apps.find(({ action }) => action.id === "terminal"),
   apps.find(({ action }) => action.id === "contact"),

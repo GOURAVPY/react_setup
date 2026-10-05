@@ -40,7 +40,7 @@ export const CALLED = ["You called? ✨", "I'm here! What's up?"];
 
 // said when an app opens (one at most every few seconds)
 export const APP_COMMENTS = {
-  finder: "That's the portfolio. Projects are in the Work folder!",
+  finder: "That's the portfolio: Gourav's projects, and company work in the Work folder!",
   safari: "A real browser! Try Wikipedia, or search for something.",
   photos: "The gallery! Click a photo to see it big.",
   contact: "Want to work together? All the links are here!",

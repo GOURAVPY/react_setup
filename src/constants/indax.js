@@ -120,23 +120,23 @@ const blogPosts = [
 const techStack = [
   {
     category: "Frontend",
-    items: ["React.js", "Next.js", "TypeScript"],
-  },
-  {
-    category: "Styling",
-    items: ["Tailwind CSS", "CSS", "Bootstrap"],
+    items: ["React", "Next.js", "Vite", "Tailwind CSS", "Ant Design", "GSAP"],
   },
   {
     category: "Backend",
-    items: ["Node.js", "Express", "NestJS"],
+    items: ["Node.js", "Express", "REST APIs", "MongoDB (Mongoose)"],
   },
   {
-    category: "Database",
-    items: ["MongoDB", "MYSQL"],
+    category: "AI & Video",
+    items: ["Claude API", "Gemini API", "AI document reading", "Remotion"],
   },
   {
-    category: "Dev Tools",
-    items: ["Git", "GitHub", "Docker"],
+    category: "Tools",
+    items: ["Git", "GitHub", "Docker", "Render", "Postman"],
+  },
+  {
+    category: "AI coding tools",
+    items: ["Claude Code", "Codex", "Cursor", "Base44"],
   },
 ];
 
@@ -229,171 +229,158 @@ export {
   gallery,
 };
 
+// A project folder in Finder: a .txt saying what it is, plus its links.
+// `position` places the folder inside Finder, `windowPosition` on the desktop.
+const project = ({ id, name, position, windowPosition, subtitle, description, links = [] }) => ({
+  id,
+  name,
+  icon: "/images/folder.png",
+  kind: "folder",
+  position,
+  windowPosition,
+  children: [
+    {
+      id: 1,
+      name: `${name}.txt`,
+      icon: "/images/txt.png",
+      kind: "file",
+      fileType: "txt",
+      position: "top-6 left-6",
+      subtitle,
+      description,
+    },
+    ...links.map((link, i) => ({
+      id: i + 2,
+      name: link.name,
+      icon: "/images/safari.png",
+      kind: "file",
+      fileType: "url",
+      href: link.href,
+      position: i === 0 ? "top-6 left-[200px]" : "top-6 left-[380px]",
+    })),
+  ],
+});
+
+// Company projects say whose they are
+const AT_STUDIO =
+  "A company project: it belongs to App Building Studio, where I built it as a Full-Stack Developer (AI), 2026–present.";
+
+// my own projects
 const WORK_LOCATION = {
   id: 1,
   type: "work",
-  name: "Work",
+  name: "Projects",
   icon: "/icons/work.svg",
   kind: "folder",
   children: [
-    // ▶ Project 1
-    {
-      id: 5,
-      name: "Nike Ecommerce Website Application",
-      icon: "/images/folder.png",
-      kind: "folder",
-      position: "top-10 left-5", // icon position inside Finder
-      windowPosition: "top-[15vh] left-20", // optional: Finder window position
-      children: [
-        {
-          id: 1,
-          name: "Nike Project.txt",
-          icon: "/images/txt.png",
-          kind: "file",
-          fileType: "txt",
-          position: "top-5 left-10",
-          description: [
-            "The Nike eCommerce website is a sleek and modern platform designed for shopping the latest Nike collections.",
-            "Instead of a simple online store, it delivers an immersive experience with bold visuals, interactive product displays, and smooth navigation.",
-            "Think of it like walking into a flagship Nike store—but right from your phone or laptop.",
-            "It's built with Next.js and Tailwind, ensuring fast performance, responsive design, and a clean, premium look.",
-          ],
-        },
-        {
-          id: 2,
-          name: "nike.com",
-          icon: "/images/safari.png",
-          kind: "file",
-          fileType: "url",
-          href: "https://youtu.be/fZdTYswuZjU?si=Awjl-pIst9e09_UU",
-          position: "top-10 right-20",
-        },
-        {
-          id: 4,
-          name: "nike.png",
-          icon: "/images/image.png",
-          kind: "file",
-          fileType: "img",
-          position: "top-52 right-80",
-          imageUrl: "/images/project-1.png",
-        },
-        {
-          id: 5,
-          name: "Design.fig",
-          icon: "/images/plain.png",
-          kind: "file",
-          fileType: "fig",
-          href: "https://google.com",
-          position: "top-60 right-20",
-        },
+    project({
+      id: 10,
+      name: "AI Resume Builder",
+      position: "top-6 left-6",
+      windowPosition: "top-[12vh] left-7",
+      subtitle: "Write a résumé with AI and download it as a PDF",
+      description: [
+        "A full-stack résumé builder with AI help: write and improve your résumé with AI, then download it as a PDF.",
+        "Accounts with secure login keep each résumé saved, so it can be edited later.",
+        "Tech: React, Redux Toolkit, Tailwind CSS, Motion, Node.js, Express, MongoDB (Mongoose), JWT login, OpenAI API, ImageKit, PDF.js.",
       ],
-    },
+      links: [
+        { name: "ai-resume-buiding.vercel.app", href: "https://ai-resume-buiding.vercel.app" },
+        { name: "Code on GitHub", href: "https://github.com/GOURAVPY/AI-RESUME-BUIDING" },
+      ],
+    }),
+  ],
+};
 
-    // ▶ Project 2
-    {
+// what I've built at my job: these belong to the company
+const COMPANY_LOCATION = {
+  id: 13,
+  type: "company",
+  name: "Work",
+  icon: "/icons/company.svg",
+  kind: "folder",
+  children: [
+    project({
       id: 6,
-      name: "AI Resume Analyzer",
-      icon: "/images/folder.png",
-      kind: "folder",
-      position: "top-52 right-80",
-      windowPosition: "top-[20vh] left-7",
-      children: [
-        {
-          id: 1,
-          name: "AI Resume Analyzer Project.txt",
-          icon: "/images/txt.png",
-          kind: "file",
-          fileType: "txt",
-          position: "top-5 right-10",
-          description: [
-            "AI Resume Analyzer is a smart tool that helps you perfect your resume with instant feedback.",
-            "Instead of guessing what recruiters want, you get AI-powered insights on keywords, formatting, and overall impact.",
-            "Think of it like having a career coach—pointing out strengths, fixing weaknesses, and boosting your chances of landing interviews.",
-            "It's built with Next.js and Tailwind, so it runs fast, looks professional, and works seamlessly on any device.",
-          ],
-        },
-        {
-          id: 2,
-          name: "ai-resume-analyzer.com",
-          icon: "/images/safari.png",
-          kind: "file",
-          fileType: "url",
-          href: "https://youtu.be/iYOz165wGkQ?si=R1hs8Legl200m0Cl",
-          position: "top-20 left-20",
-        },
-        {
-          id: 4,
-          name: "ai-resume-analyzer.png",
-          icon: "/images/image.png",
-          kind: "file",
-          fileType: "img",
-          position: "top-52 left-80",
-          imageUrl: "/images/project-2.png",
-        },
-        {
-          id: 5,
-          name: "Design.fig",
-          icon: "/images/plain.png",
-          kind: "file",
-          fileType: "fig",
-          href: "https://google.com",
-          position: "top-60 left-5",
-        },
+      name: "AI App Builder",
+      position: "top-6 left-6",
+      windowPosition: "top-[12vh] left-7",
+      subtitle: "Builds SaaS apps and websites from a plain-language prompt",
+      description: [
+        "A vibe-coding app builder: describe the app or website you want in plain words, and AI builds it, with a live preview as it goes.",
+        "It creates working SaaS apps and websites, so people without a developer can turn an idea into a real product.",
+        AT_STUDIO,
       ],
-    },
-
-    // ▶ Project 3
-    {
+    }),
+    project({
       id: 7,
-      name: "Food Delivery App",
-      icon: "/images/folder.png",
-      kind: "folder",
-      position: "top-10 left-80",
-      windowPosition: "top-[33vh] left-7",
-      children: [
-        {
-          id: 1,
-          name: "Food Delivery App Project.txt",
-          icon: "/images/txt.png",
-          kind: "file",
-          fileType: "txt",
-          position: "top-5 left-10",
-          description: [
-            "Our Food Delivery App is a fast and convenient way to order meals from your favorite restaurants.",
-            "Instead of making calls or waiting in line, you can browse menus, customize orders, and track deliveries in real time.",
-            "Think of it like having your favorite restaurants in your pocket—ready to deliver anytime, anywhere.",
-            "It’s built with React Native, so it works smoothly on both iOS and Android with a clean, modern design.",
-          ],
-        },
-        {
-          id: 2,
-          name: "food-delivery-app.com",
-          icon: "/images/safari.png",
-          kind: "file",
-          fileType: "url",
-          href: "https://youtu.be/LKrX390fJMw?si=cExkuVhf2DTV9G2-",
-          position: "top-10 right-20",
-        },
-        {
-          id: 4,
-          name: "food-delivery-app.png",
-          icon: "/images/image.png",
-          kind: "file",
-          fileType: "img",
-          position: "top-52 right-80",
-          imageUrl: "/images/project-3.png",
-        },
-        {
-          id: 5,
-          name: "Design.fig",
-          icon: "/images/plain.png",
-          kind: "file",
-          fileType: "fig",
-          href: "https://google.com",
-          position: "top-60 right-20",
-        },
+      name: "AI UGC Video Generator",
+      position: "top-6 left-[200px]",
+      windowPosition: "top-[12vh] left-32",
+      subtitle: "A platform that makes UGC-style videos with AI",
+      description: [
+        "An AI-powered platform for user-generated-content (UGC) style videos: the short, authentic-looking clips brands use in ads and social posts.",
+        AT_STUDIO,
       ],
-    },
+    }),
+    project({
+      id: 8,
+      name: "AI Movie Generator",
+      position: "top-6 left-[380px]",
+      windowPosition: "top-[26vh] left-7",
+      subtitle: "An app that generates movies with AI",
+      description: ["An app that generates movies with AI.", AT_STUDIO],
+    }),
+    project({
+      id: 9,
+      name: "Custom Domain System",
+      position: "top-[150px] left-6",
+      windowPosition: "top-[26vh] left-32",
+      subtitle: "Manages and connects custom domains",
+      description: [
+        "Domain systems for managing and connecting custom domains, so apps can go live on their own web address.",
+        AT_STUDIO,
+      ],
+    }),
+    project({
+      id: 5,
+      name: "Insurance Claim Verifier",
+      position: "top-[150px] left-[200px]",
+      windowPosition: "top-[40vh] left-7",
+      subtitle: "Catches mistakes in hospital insurance claims before they're sent",
+      description: [
+        "A web tool for hospital and TPA claim staff. Upload a patient's claim documents, and it reads them with AI, checks each one for missing fields, and compares the details across documents.",
+        "It catches things like a policy number that doesn't match between the bill and the insurance card, or “Jasvinder” on one form and “Jaswinder” on another, before the claim goes to the insurer.",
+        "Every claim ends up Verified, Needs Correction or Incomplete. Possible mismatches are flagged for a person to confirm: it never approves or rejects a claim by itself.",
+        "Tech: React 19, Vite, Ant Design, Node.js, Express 5, MongoDB (Mongoose), secure session login, Claude API for reading documents, Docker.",
+        AT_STUDIO,
+      ],
+    }),
+    project({
+      id: 11,
+      name: "Remotion Rendering Server",
+      position: "top-[150px] left-[380px]",
+      windowPosition: "top-[40vh] left-32",
+      subtitle: "Renders React video templates into MP4s through an API",
+      description: [
+        "A server that turns React video templates into finished MP4 videos. Apps send it data through an API and get a rendered video back, so videos can be made automatically.",
+        "Tech: Node.js, Remotion, FFmpeg.",
+        AT_STUDIO,
+      ],
+    }),
+    project({
+      id: 12,
+      name: "macOS Portfolio",
+      position: "top-[294px] left-6",
+      windowPosition: "top-[54vh] left-7",
+      subtitle: "The site you're using right now",
+      description: [
+        "A macOS-style desktop in the browser: a dock, windows that pour in and out, Spotlight search, light and dark modes, a Pac-Man arcade, and a real web browser that streams a cloud Chrome for sites that can't be shown in a frame.",
+        "Pixie, the pixel girl, is an AI guide: she chats with visitors using the Gemini API and decides for herself what to do next.",
+        "Tech: React 19, Vite, Tailwind CSS, GSAP, Zustand, Node.js, Gemini API, Hyperbeam.",
+        AT_STUDIO,
+      ],
+    }),
   ],
 };
 
@@ -499,6 +486,7 @@ const TRASH_LOCATION = {
 
 export const locations = {
   work: WORK_LOCATION,
+  company: COMPANY_LOCATION,
   about: ABOUT_LOCATION,
   resume: RESUME_LOCATION,
   trash: TRASH_LOCATION,

@@ -91,6 +91,8 @@ export const COMMANDS = {
     status: { symbol: "✦", verb: "Indexing" },
     run: () => [
       ...locations.work.children.map(({ name }) => ({ bullet: true, text: name })),
+      line("At my job, App Building Studio (these belong to the company):", "muted"),
+      ...locations.company.children.map(({ name }) => ({ bullet: true, text: name })),
       line("Run `open portfolio` to look inside them.", "muted"),
     ],
   },

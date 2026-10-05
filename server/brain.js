@@ -30,8 +30,8 @@ const DEFAULT_DAILY = 500; // questions per day, from everyone together
 
 const line = (label, value) => (value ? `${label}: ${value}` : null);
 
-const projects = () =>
-  locations.work.children.map((project) => {
+const projects = (location) =>
+  location.children.map((project) => {
     const notes = project.children.find((file) => file.fileType === "txt");
     return `- ${project.name}: ${notes?.description?.join(" ") ?? ""}`.trim();
   });
@@ -73,8 +73,11 @@ ${appList().join("\n")}
 FACTS ABOUT ${name.toUpperCase()}
 ${facts.join("\n")}
 
-Projects:
-${projects().join("\n")}
+Projects (${name}'s own):
+${projects(locations.work).join("\n")}
+
+Work at App Building Studio (${name}'s job; these belong to the company, so never call them ${name}'s own projects or offer their code):
+${projects(locations.company).join("\n")}
 
 Skills:
 ${techStack.map((group) => `- ${group.category}: ${group.items.join(", ")}`).join("\n")}
