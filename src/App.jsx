@@ -21,6 +21,7 @@ import {
   Home,
   Login,
   MobileHome,
+  Spotlight,
 } from "#components";
 
 gsap.registerPlugin(Draggable);
@@ -29,6 +30,7 @@ const App = () => {
   return (
     <main>
       <Navbar />
+      <Spotlight />
       <Welcome />
       <Dock />
       <MobileHome />

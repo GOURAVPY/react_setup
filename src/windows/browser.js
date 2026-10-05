@@ -198,39 +198,16 @@ export const hostName = (href) => {
 // a site's little icon, through DuckDuckGo's icon service
 export const faviconOf = (host) => `https://icons.duckduckgo.com/ip3/${host}.ico`;
 
-// the start page: sites that are happy to be shown in here
+// the start page: a few favourites (one row)
 export const SITES = [
-  { group: "Explore", name: "Wikipedia", url: "https://en.wikipedia.org/wiki/Main_Page" },
   // the cloud browser opens it; without it, Bing Videos stands in
-  { group: "Explore", name: "YouTube", url: "https://www.youtube.com" },
-  { group: "Explore", name: "Radio Garden", url: "https://radio.garden" },
-  { group: "Explore", name: "Live wind map", url: "https://earth.nullschool.net" },
-  { group: "Explore", name: "Open Library", url: "https://openlibrary.org" },
-  { group: "Explore", name: "Internet Archive", url: "https://archive.org" },
-  {
-    group: "Explore",
-    name: "Kota on the map",
-    url: "https://www.openstreetmap.org/export/embed.html?bbox=75.78%2C25.12%2C75.90%2C25.22&layer=mapnik",
-    host: "openstreetmap.org",
-  },
-  { group: "Create", name: "Excalidraw", url: "https://excalidraw.com" },
-  { group: "Create", name: "tldraw", url: "https://www.tldraw.com" },
-  { group: "Create", name: "Photopea", url: "https://www.photopea.com" },
-  { group: "Create", name: "Squoosh", url: "https://squoosh.app" },
-  { group: "Create", name: "Desmos", url: "https://www.desmos.com/calculator" },
-  { group: "Create", name: "GeoGebra", url: "https://www.geogebra.org/calculator" },
-  { group: "Developers", name: "React", url: "https://react.dev" },
-  { group: "Developers", name: "Vite", url: "https://vite.dev" },
-  { group: "Developers", name: "Tailwind CSS", url: "https://tailwindcss.com" },
-  { group: "Developers", name: "Node.js", url: "https://nodejs.org" },
-  { group: "Developers", name: "Express", url: "https://expressjs.com" },
-  { group: "Developers", name: "MongoDB", url: "https://www.mongodb.com" },
-  { group: "Developers", name: "shadcn/ui", url: "https://ui.shadcn.com" },
-  { group: "Developers", name: "Three.js", url: "https://threejs.org" },
-  { group: "Developers", name: "Remotion", url: "https://www.remotion.dev" },
-  { group: "Developers", name: "DevDocs", url: "https://devdocs.io" },
-  { group: "Developers", name: "Can I use", url: "https://caniuse.com" },
-  { group: "Developers", name: "CodeSandbox", url: "https://codesandbox.io" },
+  { group: "Favorites", name: "YouTube", url: "https://www.youtube.com" },
+  { group: "Favorites", name: "Wikipedia", url: "https://en.wikipedia.org/wiki/Main_Page" },
+  { group: "Favorites", name: "Radio Garden", url: "https://radio.garden" },
+  { group: "Favorites", name: "Live wind map", url: "https://earth.nullschool.net" },
+  { group: "Favorites", name: "Excalidraw", url: "https://excalidraw.com" },
+  { group: "Favorites", name: "Photopea", url: "https://www.photopea.com" },
+  { group: "Favorites", name: "React", url: "https://react.dev" },
 ];
 
 export const SITE_GROUPS = [...new Set(SITES.map((site) => site.group))];

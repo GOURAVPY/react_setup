@@ -6,5 +6,6 @@ import Home from "#components/Home.jsx";
 import Login from "#components/Login.jsx";
 import MobileHome from "#components/MobileHome.jsx";
 import AppIcon from "#components/AppIcon.jsx";
+import Spotlight from "#components/Spotlight.jsx";
 
-export { Navbar, Welcome, Dock, Windowcontrols, Home, Login, MobileHome, AppIcon };
+export { Navbar, Welcome, Dock, Windowcontrols, Home, Login, MobileHome, AppIcon, Spotlight };

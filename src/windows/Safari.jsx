@@ -27,6 +27,7 @@ import {
   isSearchHome,
   resolveInput,
   resolvePage,
+  searchUrl,
 } from "./browser";
 
 // A browser that really browses: type an address or a search, and the page
@@ -120,11 +121,12 @@ const Safari = () => {
     getCloudStatus().then((status) => setCloudReady(Boolean(status.enabled)));
   }, []);
 
-  // shows the cloud browser at `url`, putting a warm one to use if there is one
+  // shows the cloud browser at `url`, putting the one there is (warm or
+  // showing) to use rather than starting another
   const openCloud = (url) => {
     setCloudNote(null);
     setCloudPage({ url, title: null });
-    if (cloud?.warm) {
+    if (cloud) {
       setCloud({ ...cloud, warm: false, request: { url, seq: Date.now() } });
       return;
     }
@@ -263,13 +265,15 @@ const Safari = () => {
     setLoading(true);
   };
 
-  // something else asked for an address (openWindow("safari", { url }))
+  // something else asked for an address (openWindow("safari", { url })) or
+  // a search (openWindow("safari", { search }), from Spotlight)
   const [seenData, setSeenData] = useState(data);
   if (data !== seenData) {
     setSeenData(data);
-    if (data?.url) {
+    if (data?.search && cloudReady) openCloud(googleSearch(data.search));
+    else if (data?.url || data?.search) {
       if (cloud) closeCloud();
-      go(data.url);
+      go(data.url ?? searchUrl(data.search));
     }
   }
 

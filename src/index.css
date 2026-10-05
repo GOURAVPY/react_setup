@@ -60,6 +60,10 @@ body {
             @apply text-sm font-medium text-black;
         }
 
+        .spotlight-button {
+            @apply block cursor-pointer;
+        }
+
         .theme-menu {
             @apply relative;
 
@@ -1258,6 +1262,110 @@ section.window-maximized {
     transition: none !important;
 }
 
+/* Spotlight search (Spotlight.jsx): a search box floating over the desktop,
+   above the menu bar; a click anywhere around it closes it */
+#spotlight {
+    @apply fixed inset-0 flex justify-center items-start px-4 select-none;
+    z-index: 150000;
+    padding-top: 16vh;
+
+    .panel {
+        @apply w-full max-w-[640px] overflow-hidden rounded-2xl border border-gray-200 bg-white/80 backdrop-blur-3xl shadow-2xl text-gray-800;
+        animation: spotlight-in 0.16s ease-out;
+    }
+
+    .query {
+        @apply flex items-center gap-3 px-4 py-3 cursor-text;
+
+        svg {
+            @apply shrink-0 text-gray-500;
+        }
+
+        input {
+            @apply flex-1 min-w-0 bg-transparent text-xl outline-none placeholder:text-gray-400;
+        }
+    }
+
+    .results {
+        @apply max-h-[min(420px,52vh)] overflow-y-auto border-t border-gray-200 p-2;
+    }
+
+    h3 {
+        @apply px-2 pt-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500;
+    }
+
+    li {
+        @apply flex items-center gap-3 px-2 py-1.5 rounded-lg cursor-default;
+
+        &[aria-selected="true"] {
+            @apply bg-blue-500 text-white;
+
+            .sub {
+                @apply text-white/80;
+            }
+        }
+    }
+
+    .thumb {
+        @apply flex-center size-8 shrink-0;
+
+        .app-icon {
+            @apply size-8 object-contain;
+        }
+    }
+
+    .glyph,
+    .picture {
+        @apply flex-center size-8 rounded-lg;
+    }
+
+    .glyph {
+        @apply bg-gray-100 text-gray-700;
+    }
+
+    .picture img {
+        @apply max-w-full max-h-full;
+    }
+
+    /* a social link's white icon on its own colour */
+    .picture[style] img {
+        @apply size-4.5;
+    }
+
+    .text {
+        @apply flex-1 min-w-0;
+    }
+
+    .title {
+        @apply block truncate text-sm font-medium;
+    }
+
+    .sub {
+        @apply block truncate text-xs text-gray-500;
+    }
+
+    footer {
+        @apply flex justify-end gap-4 border-t border-gray-200 px-4 py-2 text-[11px] text-gray-500 max-sm:hidden;
+
+        kbd {
+            @apply font-sans font-semibold;
+        }
+    }
+}
+
+@keyframes spotlight-in {
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.98);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #spotlight .panel {
+        animation: none;
+    }
+}
+
 /* Dark theme. Windows and the menu bar are styled with Tailwind's light
    palette, so dark mode swaps that palette for a dark one inside them. */
 :root[data-theme="dark"] {
@@ -1270,7 +1378,7 @@ section.window-maximized {
             var(--wallpaper, url("/images/wallpaper.png"));
     }
 
-    :is(nav, .window) {
+    :is(nav, .window, #spotlight) {
         --color-white: #1e1e1e;
         --color-black: #f5f5f5;
         --color-gray-50: #2a2a2a;
@@ -1291,7 +1399,8 @@ section.window-maximized {
 
     /* text that sits on a coloured background stays white */
     #contact li,
-    .theme-menu section button:hover {
+    .theme-menu section button:hover,
+    #spotlight li[aria-selected="true"] {
         --color-white: #ffffff;
     }
 
