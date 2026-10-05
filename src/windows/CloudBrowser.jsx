@@ -18,21 +18,23 @@ const PROBLEMS = {
 };
 const PROBLEM = "The cloud browser couldn't start right now.";
 
-// Hyperbeam's limits on the picture size
+// Hyperbeam's limits on the picture size (and server/cloudBrowser.js's)
 const MIN_SIDE = 256;
+const MAX_SIDE = 1920;
 const MAX_AREA = 1920 * 1080;
 
-// a picture size matching the window: smaller pictures stream faster, and
-// pixel for pixel text stays sharp
-const fitScreen = (element, maxArea = MAX_AREA) => {
+// a picture size for a box: smaller pictures stream faster, and pixel for
+// pixel text stays sharp
+const fitSize = (boxWidth, boxHeight, maxArea = MAX_AREA) => {
+  if (boxWidth < 300 || boxHeight < 200) return null;
+  const scale = Math.min(1, Math.sqrt(maxArea / (boxWidth * boxHeight)), MAX_SIDE / boxWidth, MAX_SIDE / boxHeight);
+  const even = (n) => Math.max(MIN_SIDE, Math.floor((n * scale) / 2) * 2);
+  return { width: even(boxWidth), height: even(boxHeight) };
+};
+
+const fitScreen = (element, maxArea) => {
   const box = element?.getBoundingClientRect();
-  if (!box || box.width < 300 || box.height < 200) return { width: 1280, height: 800 };
-  let width = Math.round(box.width);
-  let height = Math.round(box.height);
-  const scale = Math.min(1, Math.sqrt(maxArea / (width * height)));
-  width = Math.max(MIN_SIDE, Math.floor((width * scale) / 2) * 2);
-  height = Math.max(MIN_SIDE, Math.floor((height * scale) / 2) * 2);
-  return { width, height };
+  return box ? fitSize(Math.round(box.width), Math.round(box.height), maxArea) : null;
 };
 
 /**
@@ -123,7 +125,10 @@ const CloudBrowser = forwardRef(function CloudBrowser(
           region: place.region,
           country: place.country,
           language: navigator.languages?.join(",") || navigator.language,
-          ...fitScreen(screen.current),
+          // a session's picture can never grow past the size it starts at, so
+          // it starts as big as the window can get (maximized) and is fitted
+          // to the window once it's running
+          ...(fitSize(window.innerWidth, window.innerHeight) ?? { width: 1280, height: 800 }),
         });
         if (cancelled) return endCloud(session.id);
         callbacks.current.onSession?.(session);
@@ -174,25 +179,24 @@ const CloudBrowser = forwardRef(function CloudBrowser(
     };
   }, []);
 
-  // the picture follows the window's size (full screen, back again)
+  // the picture follows the window's size: right away once it's running (or
+  // shown, after warming up), then as the window changes (full screen, back)
   useEffect(() => {
-    if (!ready || warm) return;
+    if (!ready) return;
     let timer = null;
     const fit = () => {
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        const hb = client.current;
-        if (!hb) return;
-        const { width, height } = fitScreen(screen.current, hb.maxArea || MAX_AREA);
-        if (width === hb.width && height === hb.height) return;
-        try {
-          hb.resize(width, height);
-        } catch {
-          // a size it won't take: it keeps the old one
-        }
-      }, 300);
+      const hb = client.current;
+      const size = hb && fitScreen(screen.current, hb.maxArea || MAX_AREA);
+      if (!size || (size.width === hb.width && size.height === hb.height)) return;
+      hb.resize(size.width, size.height).catch(() => {
+        // a size it won't take: it keeps the old one
+      });
     };
-    const watcher = new ResizeObserver(fit);
+    const later = () => {
+      clearTimeout(timer);
+      timer = setTimeout(fit, 300);
+    };
+    const watcher = new ResizeObserver(later);
     watcher.observe(screen.current);
     fit();
     return () => {
