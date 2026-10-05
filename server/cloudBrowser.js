@@ -28,8 +28,9 @@ export const createCloudBrowserHandler = ({
   allowedOrigins = [],
   monthlyMinutes = DEFAULT_MONTHLY,
 } = {}) => {
-  // a few sessions an hour per visitor, and a cap on the day for everyone
-  const allow = createLimiter({ perVisitor: 6, windowMs: 60 * 60_000, daily: 300 });
+  // a dozen sessions an hour per visitor (warm-ups started while typing count),
+  // and a cap on the day for everyone
+  const allow = createLimiter({ perVisitor: 12, windowMs: 60 * 60_000, daily: 300 });
   const sessions = new Map(); // id -> { ip, endsAt }
   let usage = { at: 0, minutes: 0 };
 
