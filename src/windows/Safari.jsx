@@ -112,31 +112,6 @@ const Safari = () => {
   const [recents, setRecents] = useState(readRecents);
   const input = useRef(null);
 
-  // the server's answers: page address -> true (allowed), false (refused),
-  // null (couldn't tell)
-  const [verdicts, setVerdicts] = useState({});
-  const needsCheck = Boolean(page && !page.blocked && !page.trusted && serverEnabled);
-  const verdict = pageUrl ? verdicts[pageUrl] : undefined;
-  const checking = needsCheck && verdict === undefined;
-  const blocked = Boolean(page && (page.blocked || verdict === false));
-
-  useEffect(() => {
-    if (!needsCheck || verdict !== undefined) return;
-    const controller = new AbortController();
-    fetch(serverUrl(`/api/frame-check?url=${encodeURIComponent(pageUrl)}`), {
-      signal: controller.signal,
-    })
-      .then((response) => (response.ok ? response.json() : { embeddable: null }))
-      .then(
-        (answer) => setVerdicts((all) => ({ ...all, [pageUrl]: answer.embeddable ?? null })),
-        () => {
-          // the server is away: try the page anyway
-          if (!controller.signal.aborted) setVerdicts((all) => ({ ...all, [pageUrl]: null }));
-        },
-      );
-    return () => controller.abort();
-  }, [pageUrl, needsCheck, verdict]);
-
   useEffect(() => {
     getCloudStatus().then((status) => setCloudReady(Boolean(status.enabled)));
   }, []);
@@ -155,6 +130,44 @@ const Safari = () => {
     setCloudNote(CLOUD_ENDED[reason] ?? null);
   };
 
+  // a site that won't show in a frame opens straight in the cloud browser,
+  // so its links stay in this window too (without it, the "won't open in
+  // here" page offers the choices)
+  const autoCloud = useRef(null);
+  useEffect(() => {
+    autoCloud.current = (url) => {
+      if (cloudReady && !cloud) openCloud(url);
+    };
+  });
+
+  // the server's answers: page address -> true (allowed), false (refused),
+  // null (couldn't tell)
+  const [verdicts, setVerdicts] = useState({});
+  const needsCheck = Boolean(page && !page.blocked && !page.trusted && serverEnabled);
+  const verdict = pageUrl ? verdicts[pageUrl] : undefined;
+  const checking = needsCheck && verdict === undefined;
+  const blocked = Boolean(page && (page.blocked || verdict === false));
+
+  useEffect(() => {
+    if (!needsCheck || verdict !== undefined) return;
+    const controller = new AbortController();
+    fetch(serverUrl(`/api/frame-check?url=${encodeURIComponent(pageUrl)}`), {
+      signal: controller.signal,
+    })
+      .then((response) => (response.ok ? response.json() : { embeddable: null }))
+      .then(
+        (answer) => {
+          setVerdicts((all) => ({ ...all, [pageUrl]: answer.embeddable ?? null }));
+          if (answer.embeddable === false) autoCloud.current?.(pageUrl);
+        },
+        () => {
+          // the server is away: try the page anyway
+          if (!controller.signal.aborted) setVerdicts((all) => ({ ...all, [pageUrl]: null }));
+        },
+      );
+    return () => controller.abort();
+  }, [pageUrl, needsCheck, verdict]);
+
   // closing the window ends the session
   if (!isOpen && cloud) closeCloud();
 
@@ -165,12 +178,16 @@ const Safari = () => {
     return () => clearInterval(timer);
   }, [cloud]);
 
+  const pushPage = (href) =>
+    setNav(({ stack, at }) => ({ stack: [...stack.slice(0, at + 1), href], at: at + 1 }));
+
   const go = (target) => {
     if (target == null) return;
     // Google's and Bing's front pages refuse to be framed: the start page
     // has its own search box
     const href = isSearchHome(target) ? HOME : target;
-    setNav(({ stack, at }) => ({ stack: [...stack.slice(0, at + 1), href], at: at + 1 }));
+    pushPage(href);
+    if (href !== HOME && resolvePage(href).blocked && cloudReady) openCloud(href);
     setLoading(href !== HOME && !resolvePage(href).blocked);
     if (href !== HOME) {
       setRecents((list) => {
@@ -213,7 +230,10 @@ const Safari = () => {
   const [seenData, setSeenData] = useState(data);
   if (data !== seenData) {
     setSeenData(data);
-    if (data?.url) go(data.url);
+    if (data?.url) {
+      if (cloud) closeCloud();
+      go(data.url);
+    }
   }
 
   // a page that never says it has loaded shouldn't spin forever
@@ -225,9 +245,13 @@ const Safari = () => {
 
   const submit = (e) => {
     e.preventDefault();
-    // in the cloud browser everything opens, Google included
-    const href = cloud ? resolveInput(address, googleSearch) : resolveInput(address);
+    // in the cloud browser everything opens, Google included; a search starts
+    // it, so clicking a result stays in this window (in a frame, Bing opens
+    // results in a new tab)
+    const isSearch = address.trim() !== "" && resolveInput(address, () => null) === null;
+    const href = cloud || (isSearch && cloudReady) ? resolveInput(address, googleSearch) : resolveInput(address);
     if (href && cloud) cloudView.current?.navigate(href);
+    else if (href && isSearch && cloudReady) openCloud(href);
     else if (href) go(href);
     // the address bar shows the page again, not what was typed
     setTyped({ at: null, text: "" });
@@ -236,7 +260,7 @@ const Safari = () => {
 
   const goHome = () => {
     if (cloud) closeCloud();
-    go(HOME);
+    pushPage(HOME);
   };
 
   const canGoBack = Boolean(cloud) || nav.at > 0;
@@ -385,8 +409,9 @@ const Safari = () => {
           )}
 
           <p className="hint">
-            YouTube videos, GitHub repositories and Spotify links open in here. Sites that refuse,
-            like Google, LinkedIn and Instagram, can open in the cloud browser.
+            {cloudReady
+              ? "Searches and sites that refuse to be shown here, like YouTube, Google and LinkedIn, open in the cloud browser, a real Chrome streamed into this window."
+              : "YouTube videos, GitHub repositories and Spotify links open in here. Many big sites, like Google, LinkedIn and Instagram, only open in their own tab."}
           </p>
         </div>
       ) : blocked ? (

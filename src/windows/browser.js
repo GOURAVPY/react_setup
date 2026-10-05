@@ -201,7 +201,8 @@ export const faviconOf = (host) => `https://icons.duckduckgo.com/ip3/${host}.ico
 // the start page: sites that are happy to be shown in here
 export const SITES = [
   { group: "Explore", name: "Wikipedia", url: "https://en.wikipedia.org/wiki/Main_Page" },
-  { group: "Explore", name: "Videos", url: videoSearchUrl("trending videos"), host: "bing.com" },
+  // the cloud browser opens it; without it, Bing Videos stands in
+  { group: "Explore", name: "YouTube", url: "https://www.youtube.com" },
   { group: "Explore", name: "Radio Garden", url: "https://radio.garden" },
   { group: "Explore", name: "Live wind map", url: "https://earth.nullschool.net" },
   { group: "Explore", name: "Open Library", url: "https://openlibrary.org" },
