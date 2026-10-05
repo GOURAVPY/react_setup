@@ -1,13 +1,16 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
 import Hyperbeam, { getRegionInfo } from "@hyperbeam/web";
 import { ExternalLink, Loader2 } from "lucide-react";
+import clsx from "clsx";
 import { endCloud, startCloud } from "./cloud";
 
 // The cloud browser inside the Browser window: a real Chrome running at
 // Hyperbeam, streamed in like a video you can click and type into. It opens
 // at `startUrl`; after that the Browser's own toolbar drives it through the
-// ref (navigate, back, forward, reload). The session ends when this unmounts,
-// when the page closes, or when its time runs out (server/cloudBrowser.js).
+// ref (navigate, back, forward, reload) or the `request` prop. It can start
+// hidden (`warm`) while the visitor is still typing, so it's ready sooner.
+// The session ends when this unmounts, when the page closes, or when its time
+// runs out (server/cloudBrowser.js).
 
 const PROBLEMS = {
   month: "The cloud browser has used up its free time for this month.",
@@ -15,15 +18,34 @@ const PROBLEMS = {
 };
 const PROBLEM = "The cloud browser couldn't start right now.";
 
+// Hyperbeam's limits on the picture size
+const MIN_SIDE = 256;
+const MAX_AREA = 1920 * 1080;
+
+// a picture size matching the window: smaller pictures stream faster, and
+// pixel for pixel text stays sharp
+const fitScreen = (element, maxArea = MAX_AREA) => {
+  const box = element?.getBoundingClientRect();
+  if (!box || box.width < 300 || box.height < 200) return { width: 1280, height: 800 };
+  let width = Math.round(box.width);
+  let height = Math.round(box.height);
+  const scale = Math.min(1, Math.sqrt(maxArea / (width * height)));
+  width = Math.max(MIN_SIDE, Math.floor((width * scale) / 2) * 2);
+  height = Math.max(MIN_SIDE, Math.floor((height * scale) / 2) * 2);
+  return { width, height };
+};
+
 /**
  * @param startUrl   the page to open first
+ * @param warm       started early and kept hidden until it's wanted
+ * @param request    { url, seq }: open this page (a new seq opens it again)
  * @param paused     stop the video while the window is in the dock
  * @param onPage     ({ url, title }) whenever the page changes
  * @param onSession  ({ id, endsAt }) once the session has started
  * @param onEnd      (reason) when the session ends by itself
  */
 const CloudBrowser = forwardRef(function CloudBrowser(
-  { startUrl, paused, onPage, onSession, onEnd },
+  { startUrl, warm = false, request, paused, onPage, onSession, onEnd },
   ref,
 ) {
   const screen = useRef(null);
@@ -43,6 +65,11 @@ const CloudBrowser = forwardRef(function CloudBrowser(
     callbacks.current = { onPage, onSession, onEnd };
   });
 
+  const open = (url) => {
+    if (client.current) client.current.tabs.update({ url });
+    else waiting.current = url;
+  };
+
   // the cloud browser's own back/forward first, else the pages seen here
   const step = (by) => {
     const tabs = client.current?.tabs;
@@ -60,16 +87,20 @@ const CloudBrowser = forwardRef(function CloudBrowser(
   useImperativeHandle(
     ref,
     () => ({
-      navigate: (url) => {
-        if (client.current) client.current.tabs.update({ url });
-        else waiting.current = url;
-      },
+      navigate: open,
       back: () => step(-1),
       forward: () => step(1),
       reload: () => client.current?.tabs.reload(),
     }),
     [],
   );
+
+  // a page asked for through the props (when a warm session is put to use)
+  const requestSeq = request?.seq;
+  const requestUrl = request?.url;
+  useEffect(() => {
+    if (requestUrl) open(requestUrl);
+  }, [requestSeq, requestUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,6 +123,7 @@ const CloudBrowser = forwardRef(function CloudBrowser(
           region: place.region,
           country: place.country,
           language: navigator.languages?.join(",") || navigator.language,
+          ...fitScreen(screen.current),
         });
         if (cancelled) return endCloud(session.id);
         callbacks.current.onSession?.(session);
@@ -142,18 +174,46 @@ const CloudBrowser = forwardRef(function CloudBrowser(
     };
   }, []);
 
-  // no need to stream video into a window that's in the dock
+  // the picture follows the window's size (full screen, back again)
   useEffect(() => {
-    if (client.current) client.current.videoPaused = paused;
-  }, [paused, state]);
+    if (!ready || warm) return;
+    let timer = null;
+    const fit = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        const hb = client.current;
+        if (!hb) return;
+        const { width, height } = fitScreen(screen.current, hb.maxArea || MAX_AREA);
+        if (width === hb.width && height === hb.height) return;
+        try {
+          hb.resize(width, height);
+        } catch {
+          // a size it won't take: it keeps the old one
+        }
+      }, 300);
+    };
+    const watcher = new ResizeObserver(fit);
+    watcher.observe(screen.current);
+    fit();
+    return () => {
+      clearTimeout(timer);
+      watcher.disconnect();
+    };
+  }, [ready, warm]);
+
+  // no need to stream video into a window that's in the dock, or into one
+  // that's warming up out of sight
+  useEffect(() => {
+    if (client.current) client.current.videoPaused = paused || warm;
+  }, [paused, warm, state]);
 
   return (
-    <div className="page cloud">
+    <div className={clsx("page cloud", warm && "warming")} aria-hidden={warm || undefined}>
       <div ref={screen} className="cloud-screen" />
       {problem ? (
         <div className="cloud-overlay">
           <p>{problem}</p>
-          <a href={startUrl} target="_blank" rel="noopener noreferrer">
+          <a href={requestUrl ?? startUrl} target="_blank" rel="noopener noreferrer">
             Open in a new tab <ExternalLink size={14} />
           </a>
         </div>

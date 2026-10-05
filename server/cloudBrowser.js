@@ -11,6 +11,7 @@ import { clientIp, createLimiter, handleCors, readBody, sendJson } from "./commo
 
 const ENGINE = "https://engine.hyperbeam.com/v0";
 const REGIONS = ["NA", "EU", "AS"];
+const MAX_AREA = 1920 * 1080; // Hyperbeam's largest picture
 
 const SESSION = 10 * 60; // seconds a session may last
 const INACTIVE = 3 * 60; // seconds without input before it ends
@@ -82,6 +83,11 @@ export const createCloudBrowserHandler = ({
     // Google and YouTube in the visitor's country and language
     const country = /^[A-Z]{2}$/.test(body.country ?? "") ? body.country : undefined;
     const language = /^[a-zA-Z0-9,;=.\- ]{2,60}$/.test(body.language ?? "") ? body.language : undefined;
+    // the picture the size of the visitor's window: smaller streams faster
+    const side = (n) => Number.isInteger(n) && n >= 256 && n <= 1920 && n % 2 === 0;
+    const fits = side(body.width) && side(body.height) && body.width * body.height <= MAX_AREA;
+    const width = fits ? body.width : 1280;
+    const height = fits ? body.height : 800;
 
     const ip = clientIp(req);
     if (!allow(ip)) return sendJson(res, 429, { error: "visitor" });
@@ -102,8 +108,11 @@ export const createCloudBrowserHandler = ({
         adblock: true,
         region,
         ...((country || language) && { locale: { country, language } }),
-        width: 1280,
-        height: 800,
+        width,
+        height,
+        fps: 30,
+        // only the visitor's own pointer: the cloud one lags behind it
+        hide_cursor: true,
         timeout: { absolute: SESSION, inactive: INACTIVE, offline: OFFLINE, warning: 60 },
       }),
     });

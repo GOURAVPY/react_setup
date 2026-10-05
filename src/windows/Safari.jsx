@@ -41,6 +41,8 @@ const HOME = "";
 const RECENTS_KEY = "browser-recents";
 const RECENTS_KEPT = 8;
 const LOAD_TIMEOUT = 15_000; // ms before the spinner gives up on a slow page
+const WARM_FOR = 60_000; // ms a cloud browser started while typing waits to be used
+const WARM_START = "https://www.google.com";
 
 // why a cloud session ended by itself
 const CLOUD_ENDED = {
@@ -93,9 +95,11 @@ const Safari = () => {
       : resolved;
   const pageUrl = page?.url ?? null;
 
-  // the cloud browser, while it's on: { startUrl, id }, the page it shows,
-  // and when its time is up
+  // the cloud browser: { startUrl, id, warm, request }, the page it shows,
+  // and when its time is up. A "warm" one was started in the background while
+  // the visitor typed, and isn't shown until it's used.
   const [cloud, setCloud] = useState(null);
+  const cloudOn = Boolean(cloud && !cloud.warm);
   const [cloudPage, setCloudPage] = useState(null);
   const [cloudEndsAt, setCloudEndsAt] = useState(null);
   const [cloudNote, setCloudNote] = useState(null);
@@ -103,7 +107,7 @@ const Safari = () => {
   const cloudView = useRef(null);
 
   // what the address bar shows, and what's typed in it until that changes
-  const shown = cloud ? (cloudPage?.url ?? cloud.startUrl) : current;
+  const shown = cloudOn ? (cloudPage?.url ?? cloud.request?.url ?? cloud.startUrl) : current;
   const [typed, setTyped] = useState({ at: shown, text: shown });
   const address = typed.at === shown ? typed.text : shown;
 
@@ -116,11 +120,31 @@ const Safari = () => {
     getCloudStatus().then((status) => setCloudReady(Boolean(status.enabled)));
   }, []);
 
+  // shows the cloud browser at `url`, putting a warm one to use if there is one
   const openCloud = (url) => {
     setCloudNote(null);
     setCloudPage({ url, title: null });
+    if (cloud?.warm) {
+      setCloud({ ...cloud, warm: false, request: { url, seq: Date.now() } });
+      return;
+    }
     setCloudEndsAt(null);
-    setCloud({ startUrl: url, id: Date.now() });
+    setCloud({ startUrl: url, id: Date.now(), warm: false, request: null });
+  };
+
+  // starts one out of sight while the visitor types a search or the address
+  // of a site that needs it, so it's ready (or nearly) by the time they press
+  // Enter
+  const warmUp = (text) => {
+    if (!cloudReady || cloud || text.trim().length < 3) return;
+    const href = resolveInput(text, () => null);
+    if (href !== null && !resolvePage(href).blocked) return;
+    setCloud({ startUrl: WARM_START, id: Date.now(), warm: true, request: null });
+  };
+
+  const typing = (text) => {
+    setTyped({ at: shown, text });
+    if (!cloudOn) warmUp(text);
   };
 
   const closeCloud = (reason) => {
@@ -136,7 +160,7 @@ const Safari = () => {
   const autoCloud = useRef(null);
   useEffect(() => {
     autoCloud.current = (url) => {
-      if (cloudReady && !cloud) openCloud(url);
+      if (cloudReady && !cloudOn) openCloud(url);
     };
   });
 
@@ -173,10 +197,20 @@ const Safari = () => {
 
   // the countdown on the cloud chip
   useEffect(() => {
-    if (!cloud) return;
+    if (!cloudOn) return;
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
-  }, [cloud]);
+  }, [cloudOn]);
+
+  // a warm one nobody used ends by itself
+  const warmId = cloud?.warm ? cloud.id : null;
+  useEffect(() => {
+    if (!warmId) return;
+    const timer = setTimeout(() => {
+      setCloud((now) => (now?.id === warmId && now.warm ? null : now));
+    }, WARM_FOR);
+    return () => clearTimeout(timer);
+  }, [warmId]);
 
   const pushPage = (href) =>
     setNav(({ stack, at }) => ({ stack: [...stack.slice(0, at + 1), href], at: at + 1 }));
@@ -187,7 +221,10 @@ const Safari = () => {
     // has its own search box
     const href = isSearchHome(target) ? HOME : target;
     pushPage(href);
-    if (href !== HOME && resolvePage(href).blocked && cloudReady) openCloud(href);
+    const refused = href !== HOME && resolvePage(href).blocked;
+    if (refused && cloudReady) openCloud(href);
+    // a warm cloud browser isn't needed for a page that shows in a frame
+    else if (cloud?.warm) closeCloud();
     setLoading(href !== HOME && !resolvePage(href).blocked);
     if (href !== HOME) {
       setRecents((list) => {
@@ -203,7 +240,7 @@ const Safari = () => {
   };
 
   const step = (by) => {
-    if (cloud) {
+    if (cloudOn) {
       if (by < 0) cloudView.current?.back();
       else cloudView.current?.forward();
       return;
@@ -217,7 +254,7 @@ const Safari = () => {
   };
 
   const reload = () => {
-    if (cloud) {
+    if (cloudOn) {
       cloudView.current?.reload();
       return;
     }
@@ -249,8 +286,8 @@ const Safari = () => {
     // it, so clicking a result stays in this window (in a frame, Bing opens
     // results in a new tab)
     const isSearch = address.trim() !== "" && resolveInput(address, () => null) === null;
-    const href = cloud || (isSearch && cloudReady) ? resolveInput(address, googleSearch) : resolveInput(address);
-    if (href && cloud) cloudView.current?.navigate(href);
+    const href = cloudOn || (isSearch && cloudReady) ? resolveInput(address, googleSearch) : resolveInput(address);
+    if (href && cloudOn) cloudView.current?.navigate(href);
     else if (href && isSearch && cloudReady) openCloud(href);
     else if (href) go(href);
     // the address bar shows the page again, not what was typed
@@ -263,8 +300,8 @@ const Safari = () => {
     pushPage(HOME);
   };
 
-  const canGoBack = Boolean(cloud) || nav.at > 0;
-  const canGoForward = Boolean(cloud) || nav.at < nav.stack.length - 1;
+  const canGoBack = cloudOn || nav.at > 0;
+  const canGoForward = cloudOn || nav.at < nav.stack.length - 1;
   const spinning = checking || (loading && !blocked);
   // no answer from the server: the page might still turn out empty
   const unsure = Boolean(page && !blocked && !checking && !page.trusted && verdict !== true);
@@ -281,13 +318,13 @@ const Safari = () => {
           <button type="button" onClick={() => step(1)} disabled={!canGoForward} aria-label="Forward">
             <ChevronRight className="icon" />
           </button>
-          <button type="button" onClick={reload} disabled={!cloud && (!page || blocked)} aria-label="Reload">
+          <button type="button" onClick={reload} disabled={!cloudOn && (!page || blocked)} aria-label="Reload">
             <RotateCw className="icon" />
           </button>
         </div>
 
         <form className="address" onSubmit={submit}>
-          {cloud ? (
+          {cloudOn ? (
             <Cloud className="icon cloud-icon" aria-label="Cloud browser" />
           ) : spinning ? (
             <Loader2 className="icon spin" aria-label="Loading" />
@@ -302,7 +339,7 @@ const Safari = () => {
             ref={input}
             type="text"
             value={address}
-            onChange={(e) => setTyped({ at: shown, text: e.target.value })}
+            onChange={(e) => typing(e.target.value)}
             onFocus={(e) => e.target.select()}
             placeholder="Search or enter website name"
             aria-label="Address"
@@ -312,7 +349,7 @@ const Safari = () => {
         </form>
 
         <div className="tools">
-          {cloud && (
+          {cloudOn && (
             <button
               type="button"
               className="cloud-chip"
@@ -325,7 +362,7 @@ const Safari = () => {
               <X size={12} />
             </button>
           )}
-          {!cloud && cloudReady && current && (
+          {!cloudOn && cloudReady && current && (
             <button
               type="button"
               onClick={() => openCloud(current)}
@@ -335,7 +372,7 @@ const Safari = () => {
               <Cloud className="icon" />
             </button>
           )}
-          <button type="button" onClick={goHome} disabled={!current && !cloud} aria-label="Start page">
+          <button type="button" onClick={goHome} disabled={!current && !cloudOn} aria-label="Start page">
             <House className="icon" />
           </button>
           <a
@@ -351,24 +388,27 @@ const Safari = () => {
         </div>
       </div>
 
-      {cloud ? (
+      {cloud && (
         <CloudBrowser
           key={cloud.id}
           ref={cloudView}
           startUrl={cloud.startUrl}
+          warm={cloud.warm}
+          request={cloud.request}
           paused={isMinimized}
           onPage={setCloudPage}
           onSession={(session) => setCloudEndsAt(session.endsAt)}
           onEnd={closeCloud}
         />
-      ) : !page ? (
+      )}
+      {cloudOn ? null : !page ? (
         <div className="page start">
           <form className="big-search" onSubmit={submit}>
             <Search className="icon" />
             <input
               type="text"
               value={address}
-              onChange={(e) => setTyped({ at: current, text: e.target.value })}
+              onChange={(e) => typing(e.target.value)}
               placeholder="Search the web or type an address"
               aria-label="Search the web or type an address"
               autoComplete="off"
