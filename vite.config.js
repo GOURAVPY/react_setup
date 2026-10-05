@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { createPixieHandler } from './server/brain.js'
 import { createMindHandler } from './server/mind.js'
 import { createFrameCheckHandler } from './server/frameCheck.js'
+import { createCloudBrowserHandler } from './server/cloudBrowser.js'
 
 // runs Pixie's brain inside the dev server, so `npm run dev` is all you need;
 // the key comes from GEMINI_API_KEY in your environment or in .env.local
@@ -18,6 +19,11 @@ const pixieBrain = (env) => ({
     server.middlewares.use('/api/pixie', createPixieHandler(options))
     // the Browser app asks here whether a site may be shown in its window
     server.middlewares.use('/api/frame-check', createFrameCheckHandler())
+    // …and starts a cloud browser for sites that refuse (HYPERBEAM_API_KEY)
+    server.middlewares.use(
+      '/api/cloud-browser',
+      createCloudBrowserHandler({ apiKey: env.HYPERBEAM_API_KEY }),
+    )
   },
 })
 

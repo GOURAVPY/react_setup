@@ -83,19 +83,19 @@ const refuses = (host) =>
  * Turns what was typed in the address bar into an address: a web address
  * as it is, a bare domain with https:// added, anything else as a search.
  */
-export const resolveInput = (raw) => {
+export const resolveInput = (raw, toSearch = searchUrl) => {
   const text = raw.trim();
   if (!text) return null;
   const hasScheme = /^[a-z][a-z0-9+.-]*:\/\//i.test(text);
   const looksLikeAddress =
     hasScheme || (!/\s/.test(text) && /^[^/?#]+\.[a-z]{2,}([/?#]|$)/i.test(text));
-  if (!looksLikeAddress) return searchUrl(text);
+  if (!looksLikeAddress) return toSearch(text);
   try {
     const url = new URL(hasScheme ? text : `https://${text}`);
-    if (url.protocol !== "https:" && url.protocol !== "http:") return searchUrl(text);
+    if (url.protocol !== "https:" && url.protocol !== "http:") return toSearch(text);
     return url.href;
   } catch {
-    return searchUrl(text);
+    return toSearch(text);
   }
 };
 
@@ -154,8 +154,15 @@ export const resolvePage = (href) => {
           ? parts[1]
           : url.searchParams.get("v");
     if (id && /^[\w-]{6,20}$/.test(id)) return swap(`https://www.youtube.com/embed/${id}`, "youtube.com");
+    // the rest of YouTube needs the cloud browser; Bing Videos is the stand-in
     const query = url.searchParams.get("search_query");
-    return swap(videoSearchUrl(query || "trending videos"));
+    return {
+      url: url.href,
+      host: "youtube.com",
+      blocked: true,
+      trusted: false,
+      alternative: { url: videoSearchUrl(query || "trending videos"), label: "Bing Videos instead" },
+    };
   }
 
   if (host === "google.com" && url.pathname === "/search" && url.searchParams.get("q")) {

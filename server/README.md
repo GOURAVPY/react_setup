@@ -6,6 +6,7 @@ Pixie uses Gemini in two ways: she answers visitors' questions, and her "mind" d
 - `mind.js`: her own decisions (`/api/pixie/mind`). About once a minute, while someone is using the page, the page describes the moment: where she is, her mood, energy and boredom, open windows, and what the visitor just did. Gemini then plans her next 30 to 60 seconds: walk somewhere, sit, think or say something, read, dance, use her slingshot, kick her ball, water her plant, sleep in her bed, and so on. Each visitor gets at most 12 plans per 10 minutes, and the whole site 1500 per day. Without a plan, or when the server says no, she wanders about on her own as before.
 - `common.js`: the parts both share: limits, website checks and the Gemini call.
 - `frameCheck.js`: for the Browser app (`/api/frame-check`). Before the Browser shows a site it doesn't know, it asks here whether the site allows being shown inside another page. Sites that refuse get an "open in a new tab" page instead of a broken frame. It only reads response headers, never page content, and refuses private or local network addresses. It needs no API key; each visitor gets 60 checks per 10 minutes, and each answer is remembered for an hour.
+- `cloudBrowser.js`: the Browser app's cloud browser (`/api/cloud-browser`). For sites that refuse to be shown inside another page, a real Chrome runs at [Hyperbeam](https://hyperbeam.com) and is streamed into the Browser window. It needs `HYPERBEAM_API_KEY`. Each session lasts at most 10 minutes; it ends after 3 quiet minutes, 45 seconds after the visitor leaves, or when they close the window. Each visitor can start 6 sessions an hour, the whole site 300 a day, and it stops for the month at 9,000 minutes, under Hyperbeam's 10,000 free (`CLOUD_BROWSER_MONTHLY_MINUTES` changes that). Without the key, the Browser simply offers "Open in a new tab".
 - `profile.js`: facts about you. **Fill this in.** She also uses the projects, skills and links from `src/constants/indax.js`.
 - `index.js`: runs the handler as its own web service for the live site.
 
@@ -33,7 +34,7 @@ Two services from the same GitHub repository:
 | Build command | `node --version` (nothing to build) |
 | Start command | `node server/index.js` |
 | Instance type | Free |
-| Environment | `GEMINI_API_KEY` = your key; `ALLOWED_ORIGINS` = your site's address (step 3) |
+| Environment | `GEMINI_API_KEY` = your key; `HYPERBEAM_API_KEY` = your Hyperbeam key (for the cloud browser); `ALLOWED_ORIGINS` = your site's address (step 3) |
 
 **2. The website: New → Static Site**
 

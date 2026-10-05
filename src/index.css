@@ -222,8 +222,9 @@ body {
         .frame-hint {
             @apply flex flex-none items-center justify-center gap-2 px-4 py-1.5 text-xs text-gray-500 bg-gray-50 border-b border-gray-200;
 
-            a {
-                @apply inline-flex items-center gap-1 font-medium text-blue-600 hover:underline;
+            a,
+            button {
+                @apply inline-flex items-center gap-1 font-medium text-blue-600 cursor-pointer hover:underline;
             }
         }
 
@@ -307,9 +308,56 @@ body {
                 @apply mt-2 text-lg font-semibold text-gray-800;
             }
 
-            a {
-                @apply inline-flex items-center gap-2 mt-3 px-4 py-2 rounded-lg bg-blue-500 text-white text-sm font-medium hover:bg-blue-600;
+            p {
+                @apply max-w-md text-sm;
             }
+
+            .note {
+                @apply text-xs text-amber-600;
+            }
+
+            .choices {
+                @apply flex flex-wrap justify-center gap-2 mt-3;
+            }
+
+            .primary,
+            .secondary {
+                @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer;
+            }
+
+            .primary {
+                @apply bg-blue-500 text-white hover:bg-blue-600;
+            }
+
+            .secondary {
+                @apply bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200;
+            }
+        }
+
+        /* the cloud browser: a real Chrome streamed in from Hyperbeam */
+        .cloud {
+            @apply relative bg-black;
+        }
+
+        .cloud-screen {
+            @apply absolute inset-0;
+        }
+
+        .cloud-overlay {
+            @apply absolute inset-0 flex flex-col items-center justify-center gap-3 px-10 text-center text-sm text-gray-300;
+            background: #111;
+
+            a {
+                @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-500 text-white font-medium hover:bg-blue-600;
+            }
+        }
+
+        .cloud-icon {
+            @apply text-blue-500;
+        }
+
+        .tools .cloud-chip {
+            @apply w-auto gap-1 px-2 text-xs font-semibold tabular-nums text-blue-600 bg-blue-100 hover:bg-blue-200 hover:text-blue-700;
         }
     }
 

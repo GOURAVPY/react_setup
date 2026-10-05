@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
+  Cloud,
   ExternalLink,
   Globe,
   House,
@@ -10,11 +11,14 @@ import {
   RotateCw,
   Search,
   ShieldAlert,
+  X,
 } from "lucide-react";
 import { Windowcontrols } from "../components";
 import WindowWrapper from "../hoc/Windowwappre";
 import useWindowStore from "../store/window";
 import { serverEnabled, serverUrl } from "../components/pixie/brain";
+import CloudBrowser from "./CloudBrowser";
+import { getCloudStatus, googleSearch } from "./cloud";
 import {
   SITES,
   SITE_GROUPS,
@@ -29,12 +33,25 @@ import {
 // loads inside the window. Before showing a site it doesn't know, it asks the
 // server (server/frameCheck.js) whether the site allows being shown inside
 // another page; sites that refuse get an "open in a new tab" page instead of
-// the browser's broken-page error. "" in the history is the start page.
+// the browser's broken-page error, and the choice of the cloud browser: a
+// real Chrome streamed in from Hyperbeam that opens anything (CloudBrowser).
+// "" in the history is the start page.
 
 const HOME = "";
 const RECENTS_KEY = "browser-recents";
 const RECENTS_KEPT = 8;
 const LOAD_TIMEOUT = 15_000; // ms before the spinner gives up on a slow page
+
+// why a cloud session ended by itself
+const CLOUD_ENDED = {
+  absolute: "Your 10 minutes in the cloud browser are up.",
+  inactive: "The cloud browser closed after a few quiet minutes.",
+};
+
+const clock = (ms) => {
+  const seconds = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+};
 
 const readRecents = () => {
   try {
@@ -55,15 +72,40 @@ const SiteIcon = ({ host, name }) => (
 
 const Safari = () => {
   const data = useWindowStore((state) => state.windows.safari.data);
+  const isOpen = useWindowStore((state) => state.windows.safari.isOpen);
+  const isMinimized = useWindowStore((state) => state.windows.safari.isMinimized);
 
   const [nav, setNav] = useState({ stack: [HOME], at: 0 });
   const current = nav.stack[nav.at];
-  const page = current ? resolvePage(current) : null;
+  // is the cloud browser switched on (a Hyperbeam key, minutes left)?
+  const [cloudReady, setCloudReady] = useState(false);
+  const resolved = current ? resolvePage(current) : null;
+  // without the cloud browser, a stand-in opens straight away (YouTube's
+  // home page becomes Bing Videos)
+  const page =
+    resolved?.blocked && resolved.alternative && !cloudReady
+      ? {
+          url: resolved.alternative.url,
+          host: hostName(resolved.alternative.url),
+          blocked: false,
+          trusted: true,
+        }
+      : resolved;
   const pageUrl = page?.url ?? null;
 
-  // what's typed in the address bar, until the page changes
-  const [typed, setTyped] = useState({ at: current, text: current });
-  const address = typed.at === current ? typed.text : current;
+  // the cloud browser, while it's on: { startUrl, id }, the page it shows,
+  // and when its time is up
+  const [cloud, setCloud] = useState(null);
+  const [cloudPage, setCloudPage] = useState(null);
+  const [cloudEndsAt, setCloudEndsAt] = useState(null);
+  const [cloudNote, setCloudNote] = useState(null);
+  const [now, setNow] = useState(() => Date.now());
+  const cloudView = useRef(null);
+
+  // what the address bar shows, and what's typed in it until that changes
+  const shown = cloud ? (cloudPage?.url ?? cloud.startUrl) : current;
+  const [typed, setTyped] = useState({ at: shown, text: shown });
+  const address = typed.at === shown ? typed.text : shown;
 
   const [loading, setLoading] = useState(false);
   const [reloads, setReloads] = useState(0);
@@ -95,6 +137,34 @@ const Safari = () => {
     return () => controller.abort();
   }, [pageUrl, needsCheck, verdict]);
 
+  useEffect(() => {
+    getCloudStatus().then((status) => setCloudReady(Boolean(status.enabled)));
+  }, []);
+
+  const openCloud = (url) => {
+    setCloudNote(null);
+    setCloudPage({ url, title: null });
+    setCloudEndsAt(null);
+    setCloud({ startUrl: url, id: Date.now() });
+  };
+
+  const closeCloud = (reason) => {
+    setCloud(null);
+    setCloudPage(null);
+    setCloudEndsAt(null);
+    setCloudNote(CLOUD_ENDED[reason] ?? null);
+  };
+
+  // closing the window ends the session
+  if (!isOpen && cloud) closeCloud();
+
+  // the countdown on the cloud chip
+  useEffect(() => {
+    if (!cloud) return;
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [cloud]);
+
   const go = (target) => {
     if (target == null) return;
     // Google's and Bing's front pages refuse to be framed: the start page
@@ -116,6 +186,11 @@ const Safari = () => {
   };
 
   const step = (by) => {
+    if (cloud) {
+      if (by < 0) cloudView.current?.back();
+      else cloudView.current?.forward();
+      return;
+    }
     setNav((n) => {
       const at = Math.min(n.stack.length - 1, Math.max(0, n.at + by));
       const href = n.stack[at];
@@ -125,6 +200,10 @@ const Safari = () => {
   };
 
   const reload = () => {
+    if (cloud) {
+      cloudView.current?.reload();
+      return;
+    }
     if (!page || blocked) return;
     setReloads((n) => n + 1);
     setLoading(true);
@@ -146,13 +225,22 @@ const Safari = () => {
 
   const submit = (e) => {
     e.preventDefault();
-    const href = resolveInput(address);
-    if (href) go(href);
+    // in the cloud browser everything opens, Google included
+    const href = cloud ? resolveInput(address, googleSearch) : resolveInput(address);
+    if (href && cloud) cloudView.current?.navigate(href);
+    else if (href) go(href);
+    // the address bar shows the page again, not what was typed
+    setTyped({ at: null, text: "" });
     input.current?.blur();
   };
 
-  const canGoBack = nav.at > 0;
-  const canGoForward = nav.at < nav.stack.length - 1;
+  const goHome = () => {
+    if (cloud) closeCloud();
+    go(HOME);
+  };
+
+  const canGoBack = Boolean(cloud) || nav.at > 0;
+  const canGoForward = Boolean(cloud) || nav.at < nav.stack.length - 1;
   const spinning = checking || (loading && !blocked);
   // no answer from the server: the page might still turn out empty
   const unsure = Boolean(page && !blocked && !checking && !page.trusted && verdict !== true);
@@ -169,13 +257,15 @@ const Safari = () => {
           <button type="button" onClick={() => step(1)} disabled={!canGoForward} aria-label="Forward">
             <ChevronRight className="icon" />
           </button>
-          <button type="button" onClick={reload} disabled={!page || blocked} aria-label="Reload">
+          <button type="button" onClick={reload} disabled={!cloud && (!page || blocked)} aria-label="Reload">
             <RotateCw className="icon" />
           </button>
         </div>
 
         <form className="address" onSubmit={submit}>
-          {spinning ? (
+          {cloud ? (
+            <Cloud className="icon cloud-icon" aria-label="Cloud browser" />
+          ) : spinning ? (
             <Loader2 className="icon spin" aria-label="Loading" />
           ) : blocked ? (
             <ShieldAlert className="icon" />
@@ -188,7 +278,7 @@ const Safari = () => {
             ref={input}
             type="text"
             value={address}
-            onChange={(e) => setTyped({ at: current, text: e.target.value })}
+            onChange={(e) => setTyped({ at: shown, text: e.target.value })}
             onFocus={(e) => e.target.select()}
             placeholder="Search or enter website name"
             aria-label="Address"
@@ -198,23 +288,56 @@ const Safari = () => {
         </form>
 
         <div className="tools">
-          <button type="button" onClick={() => go(HOME)} disabled={!current} aria-label="Start page">
+          {cloud && (
+            <button
+              type="button"
+              className="cloud-chip"
+              onClick={() => closeCloud()}
+              title="End the cloud browser"
+              aria-label="End the cloud browser"
+            >
+              <Cloud size={13} />
+              {cloudEndsAt ? clock(cloudEndsAt - now) : "Cloud"}
+              <X size={12} />
+            </button>
+          )}
+          {!cloud && cloudReady && current && (
+            <button
+              type="button"
+              onClick={() => openCloud(current)}
+              title="Open this page in the cloud browser"
+              aria-label="Open this page in the cloud browser"
+            >
+              <Cloud className="icon" />
+            </button>
+          )}
+          <button type="button" onClick={goHome} disabled={!current && !cloud} aria-label="Start page">
             <House className="icon" />
           </button>
           <a
-            href={current || undefined}
+            href={shown || undefined}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Open in a new tab"
-            aria-disabled={!current}
-            className={current ? undefined : "disabled"}
+            aria-disabled={!shown}
+            className={shown ? undefined : "disabled"}
           >
             <ExternalLink className="icon" />
           </a>
         </div>
       </div>
 
-      {!page ? (
+      {cloud ? (
+        <CloudBrowser
+          key={cloud.id}
+          ref={cloudView}
+          startUrl={cloud.startUrl}
+          paused={isMinimized}
+          onPage={setCloudPage}
+          onSession={(session) => setCloudEndsAt(session.endsAt)}
+          onEnd={closeCloud}
+        />
+      ) : !page ? (
         <div className="page start">
           <form className="big-search" onSubmit={submit}>
             <Search className="icon" />
@@ -262,18 +385,40 @@ const Safari = () => {
           )}
 
           <p className="hint">
-            YouTube videos, GitHub repositories and Spotify links open in here. Many big sites,
-            like Google, LinkedIn and Instagram, only open in their own tab.
+            YouTube videos, GitHub repositories and Spotify links open in here. Sites that refuse,
+            like Google, LinkedIn and Instagram, can open in the cloud browser.
           </p>
         </div>
       ) : blocked ? (
         <div className="page blocked">
           <Globe size={40} strokeWidth={1.5} />
           <h3>{page.host} won&apos;t open in here</h3>
-          <p>This site only allows itself to be shown in its own tab.</p>
-          <a href={current} target="_blank" rel="noopener noreferrer">
-            Open in a new tab <ExternalLink size={14} />
-          </a>
+          <p>
+            {cloudReady
+              ? "This site doesn't allow being shown inside other pages, but the cloud browser can open it."
+              : "This site only allows itself to be shown in its own tab."}
+          </p>
+          {cloudNote && <p className="note">{cloudNote}</p>}
+          <div className="choices">
+            {cloudReady && (
+              <button type="button" className="primary" onClick={() => openCloud(current)}>
+                <Cloud size={15} /> Open in cloud browser
+              </button>
+            )}
+            {page.alternative && (
+              <button type="button" className="secondary" onClick={() => go(page.alternative.url)}>
+                {page.alternative.label}
+              </button>
+            )}
+            <a
+              href={current}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cloudReady ? "secondary" : "primary"}
+            >
+              Open in a new tab <ExternalLink size={14} />
+            </a>
+          </div>
         </div>
       ) : checking ? (
         <div className="page checking" aria-live="polite">
@@ -285,6 +430,11 @@ const Safari = () => {
           {unsure && (
             <p className="frame-hint">
               Page stays empty? {page.host} may not allow being shown here.
+              {cloudReady && (
+                <button type="button" onClick={() => openCloud(current)}>
+                  <Cloud size={12} /> Try the cloud browser
+                </button>
+              )}
               <a href={current} target="_blank" rel="noopener noreferrer">
                 Open in a new tab <ExternalLink size={12} />
               </a>

@@ -2,6 +2,7 @@ import http from "node:http";
 import { createPixieHandler } from "./brain.js";
 import { createMindHandler } from "./mind.js";
 import { createFrameCheckHandler } from "./frameCheck.js";
+import { createCloudBrowserHandler } from "./cloudBrowser.js";
 
 // Pixie's brain as its own small web service, for when the site itself is
 // hosted as static files (Render Static Site). Settings come from the
@@ -9,6 +10,8 @@ import { createFrameCheckHandler } from "./frameCheck.js";
 //   GEMINI_API_KEY    the Gemini key (required)
 //   ALLOWED_ORIGINS   the site's address, e.g. https://my-portfolio.onrender.com
 //                     (several separated by commas)
+//   HYPERBEAM_API_KEY the Browser app's cloud browser (optional)
+//   CLOUD_BROWSER_MONTHLY_MINUTES  optional cap, default 9000
 //   PIXIE_MODEL       optional Gemini model id
 //   PIXIE_DAILY_LIMIT optional chat questions per day from everyone together
 //   PIXIE_MIND_DAILY  optional plans (her own decisions) per day, all together
@@ -32,6 +35,12 @@ const mind = createMindHandler({
 });
 // the Browser app: may this site be shown inside another page?
 const frameCheck = createFrameCheckHandler({ allowedOrigins: options.allowedOrigins });
+// …and its cloud browser for sites that refuse
+const cloudBrowser = createCloudBrowserHandler({
+  apiKey: process.env.HYPERBEAM_API_KEY,
+  allowedOrigins: options.allowedOrigins,
+  monthlyMinutes: Number(process.env.CLOUD_BROWSER_MONTHLY_MINUTES) || undefined,
+});
 
 const server = http.createServer((req, res) => {
   const path = (req.url ?? "").split("?")[0];
@@ -39,6 +48,7 @@ const server = http.createServer((req, res) => {
   if (path === "/api/pixie/mind") return mind(req, res);
   // the site pings this on load, so a sleeping free server wakes up in time
   if (path === "/api/frame-check") return frameCheck(req, res);
+  if (path === "/api/cloud-browser" || path === "/api/cloud-browser/end") return cloudBrowser(req, res);
   if (path === "/api/health" || path === "/") {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.end("ok");
