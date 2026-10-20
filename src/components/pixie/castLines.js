@@ -172,6 +172,8 @@ export const THING_LINES = {
   machine: ["My coffee machine. Best thing I own ☕", "That's where all my energy comes from ☕", "One mug, coming up… later ☕"],
   easel: ["Not finished yet. No peeking! 🎨", "It's coming along… 🎨", "Guess what it's going to be!"],
   easelDone: ["Do you like it? 🎨", "Not bad, right? 😊", "I'll start a new one soon!"],
+  bench: ["My favourite bench 🌳", "Gourav and I sit here sometimes 💕", "Come and sit, it's lovely here 🌸"],
+  tree: ["My blossom tree 🌸", "It blooms all year here. A little magic ✨", `${BIRD_NAME} likes this tree too 💙`],
 };
 
 // what's on their minds while they work, in thought bubbles. Gourav mostly
@@ -219,6 +221,7 @@ export const THINKING_OF = {
     { text: "Her half of our heart… I hope she's wearing it today 💕", picture: "necklace" },
     { text: "I picked that bracelet just for her. I hope she loves it ✨", picture: "bracelet" },
     { text: `I bet ${BIRD_NAME} is squawking my name to her again 💕`, picture: "bird" },
+    { text: "Maybe I'll go and sit with her on her park bench 🌳", picture: "herWave" },
   ],
   her: [
     { text: "I wonder what he's doing right now… 💕", picture: ["himCoding", "himCoffee", "himWave"] },
@@ -235,6 +238,97 @@ export const THINKING_OF = {
 
 // Gourav, done at his desk for now (sometimes)
 export const DESK_DONE = ["Pushed it! 🚀", "Bug fixed. Next! 😅", "Tests are green ✅", "Done for now. Time to check on her 💕"];
+
+// her park bench (castThings.js): now and then she sits there a while, and
+// often Gourav comes to sit with her. Lines with a who are said by that one
+// (her, or Gourav visiting her).
+export const BENCH_START = ["I'll sit in the park a while 🌳", "Such a lovely day for the park 🌸", "A little break on my bench 🌳"];
+export const BENCH_THOUGHTS = [
+  "The blossom smells so sweet today 🌸",
+  "The breeze is so nice here 🍃",
+  { text: "I wish he were here with me… 💕", picture: "himWave" },
+  { text: "Maybe he'll come and sit with me 💕", picture: ["himWave", "himCoding"] },
+  "I could sit here all day 🌳",
+];
+// he walks up to her bench
+export const VISIT_HELLO = [
+  "There you are! I was looking for you 💕",
+  "Room on that bench for one more? 💕",
+  "I needed a break. And I missed you 💕",
+];
+// what they talk about, side by side
+export const VISIT_TALKS = [
+  [
+    { who: "her", text: "Gourav! You came 🌸" },
+    { who: "gourav", text: "Of course. I missed you 💕" },
+    { who: "her", text: "Did you eat today? The truth! 🍲" },
+    { who: "gourav", text: "…I had coffee? 😅" },
+    { who: "her", text: "Gourav! We're getting food after this 😤" },
+  ],
+  [
+    { who: "gourav", text: "How's the painting going? 🎨" },
+    { who: "her", text: "Slowly. I'm painting something for you 💕" },
+    { who: "gourav", text: "For me? What is it?" },
+    { who: "her", text: "It's a surprise. No peeking! 🙈" },
+  ],
+  [
+    { who: "her", text: "You look tired. Coding late again?" },
+    { who: "gourav", text: "Just one little bug… okay, a big one 😅" },
+    { who: "her", text: "Rest your eyes a minute. Here, with me 💕" },
+    { who: "gourav", text: "Okay. Just a minute 💕" },
+  ],
+  [
+    { who: "gourav", text: "You're wearing it! Your half of our heart 💕" },
+    { who: "her", text: "Always. And you're wearing yours 💕" },
+    { who: "gourav", text: "Together, it's a whole heart ❤️" },
+  ],
+  [
+    { who: "her", text: `${BIRD_NAME} learned a new word today` },
+    { who: "gourav", text: "Let me guess… my name? 😄" },
+    { who: "her", text: "How did you know?! 😆" },
+    { who: "gourav", text: "He's a clever bird 💙" },
+  ],
+];
+// and then a hug: one asks, and something said in it
+export const HUG_ASK = [
+  { who: "her", text: "Come here, you 🤗" },
+  { who: "gourav", text: "Hug? 🤗" },
+  { who: "her", text: "I need a hug 🤗" },
+];
+export const HUG_SAYS = [
+  { who: "her", text: "I'm so glad you're here 💕" },
+  { who: "gourav", text: "I'm always here for you 💕" },
+  { who: "her", text: "Best part of my day 💕" },
+  { who: "gourav", text: "You make everything better 💕" },
+];
+// back to work he goes
+export const VISIT_BYE = [
+  [
+    { who: "gourav", text: "I should get back to my code… 💻" },
+    { who: "her", text: "Go! But eat something first 🍲" },
+  ],
+  [
+    { who: "gourav", text: "See you this evening? 💕" },
+    { who: "her", text: "It's a date 🌸" },
+  ],
+  [
+    { who: "gourav", text: "Back to work. I'll miss you 💕" },
+    { who: "her", text: "Miss you already 💕" },
+  ],
+];
+// once he's gone
+export const AFTER_VISIT = [
+  { text: "He came just to see me… 💕", picture: "himWave" },
+  { text: "Best part of my day 💕", picture: "himWave" },
+  { text: "Don't forget to eat, Gourav! 🍲", picture: "himCoding" },
+];
+// clicked while he's visiting: him, and her
+export const VISIT_CLICK = {
+  gourav: ["Hi! Just visiting her 💕", "Shh, we're on a little date 😄", "She's the best, isn't she? 💕"],
+  her: ["Hehe, he came to see me 💕", "Isn't he sweet? 🌸", "We're having a little date 🌸"],
+};
+// she's carried off, or called away: off he goes
+export const VISIT_CUT = ["Hey! Bring her back! 😄", "Okay, okay, back to work 😅", "See you later! 💕"];
 
 // her, finishing a painting (castArt.js PAINTINGS)
 export const PAINTED = {
