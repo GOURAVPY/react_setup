@@ -5,7 +5,10 @@ import { createCastThings } from "./castThings";
 import ThoughtPicture from "./ThoughtPicture";
 import {
   ABOUT,
+  AFTER_VISIT,
   APP_LINES,
+  BENCH_START,
+  BENCH_THOUGHTS,
   BIRD_DANCES,
   BIRD_DANCING,
   BIRD_OWN_SONG,
@@ -24,6 +27,8 @@ import {
   HELD,
   HELLO,
   HER_NAME,
+  HUG_ASK,
+  HUG_SAYS,
   MUSINGS,
   PAINTED,
   PAINT_THOUGHTS,
@@ -36,6 +41,11 @@ import {
   THINKING_OF,
   THING_LINES,
   TIPS,
+  VISIT_BYE,
+  VISIT_CLICK,
+  VISIT_CUT,
+  VISIT_HELLO,
+  VISIT_TALKS,
 } from "./castLines";
 import usePixieStore, { justPicked } from "../../store/pixie";
 import useMusicStore from "../../store/music";
@@ -59,6 +69,12 @@ const THOUGHTS_KEPT = 8; // recent thoughts their app shows
 const READ_EVERY = 0.3; // how often a spell of work is a reading break instead (Gourav)
 const READ_SECONDS = [14, 24]; // s he reads for
 const DANCE_FOR = 7; // s they dance when a song starts
+const BENCH_EVERY = 0.35; // how often a spell of work is a sit on her park bench instead (her)
+const BENCH_FOR = [16_000, 26_000]; // ms she sits there, on her own
+const VISIT_CHANCE = 0.7; // how often Gourav comes to sit with her
+const VISIT_AFTER = [4000, 9000]; // ms after she sits down that he walks in
+const HUG_FOR = 6000; // ms they hug
+const AFTER_VISIT_FOR = [5000, 9000]; // ms she stays on the bench once he's gone
 
 const NAMES = { gourav: "Gourav", her: HER_NAME };
 const LABELS = {
@@ -89,6 +105,7 @@ const desktopReady = () =>
 
 const CompanionOnScreen = ({ who }) => {
   const root = useRef(null); // holds their canvas and bubble
+  const guestRoot = useRef(null); // Gourav, visiting her on her park bench
   const layer = useRef(null); // their things
   const stage = useRef(null);
   const script = useRef(null);
@@ -111,8 +128,21 @@ const CompanionOnScreen = ({ who }) => {
         return playing ? (synth.position() * songs[current].bpm) / 60 : null;
       },
     });
+    // with her, Gourav comes to visit now and then: he walks in, sits with
+    // her on her park bench, and off he goes again
+    const guestCanvas = guestRoot.current?.querySelector("canvas");
+    const guest = guestCanvas ? createPerson("gourav", { root: guestRoot.current, canvas: guestCanvas, still }) : null;
+    if (guest) guestRoot.current.style.visibility = "hidden";
+    // whoever's talking: their mouth moves, on the screen or on her bench
+    const voice = (name, body) => ({
+      setTalking(talking) {
+        body.setTalking(talking);
+        things.mouth?.(name, talking);
+      },
+      act: (pose, seconds) => body.act(pose, seconds),
+    });
     const play = createScript({
-      people: { [who]: person },
+      people: { [who]: voice(who, person), ...(guest && { gourav: voice("gourav", guest) }) },
       show: (next) => {
         setLine(next);
         setTyped(0);
@@ -152,6 +182,11 @@ const CompanionOnScreen = ({ who }) => {
           say(pick(ROBOT_LINES));
           return;
         }
+        // Gourav, sitting with her on her bench
+        if (name === "guest") {
+          say({ who: "gourav", text: pick(VISIT_CLICK.gourav) });
+          return;
+        }
         // his bookshelf: a word, and his book opens
         if (name === "shelf") {
           say(pick(SHELF_LINES));
@@ -166,6 +201,124 @@ const CompanionOnScreen = ({ who }) => {
       },
       onPerson: (e) => grab(e),
     });
+
+    // her park bench: now and then, instead of painting, she sits there a
+    // while; often Gourav comes and sits with her, they talk, hug, and then
+    // he has to get back to work. A visit goes "coming" (he walks in),
+    // "talk", "ask" (for a hug), "hug", "bye", then "going" (he walks off).
+    let onBench = false;
+    let benchUntil = 0;
+    let visitAt = 0;
+    let visit = null; // { stage, next } while he's here
+    let visits = 0; // times he's come this visit
+    const guestSays = (text) => ({ who: "gourav", text });
+    // they talk if they share their thoughts; quietly, they just sit
+    const talkTogether = (lines) => {
+      if (usePixieStore.getState().chatty) say(...lines);
+    };
+    // he's off the screen again
+    const guestGone = () => {
+      if (guestRoot.current) guestRoot.current.style.visibility = "hidden";
+      visit = null;
+      if (onBench) {
+        benchUntil = performance.now() + between(...AFTER_VISIT_FOR);
+        think(pick(AFTER_VISIT));
+      }
+    };
+    // up he gets from the bench, and away
+    const guestUp = () => {
+      things.hug(false);
+      things.sit("him", false);
+      guest.setHidden(false);
+      guest.stopWork();
+    };
+    const startVisit = () => {
+      visitAt = 0;
+      visits += 1;
+      visit = { stage: "coming", next: 0 };
+      guestRoot.current.style.visibility = "";
+      guest.enter(false);
+      guest.work({
+        at: () => things.benchSpot("him"),
+        pose: "stand",
+        face: -1,
+        seconds: Infinity,
+        fast: true,
+        onStart: () => {
+          if (!visit) return;
+          guest.setHidden(true);
+          things.sit("him", true);
+          visit = { stage: "talk", next: performance.now() + 3000 };
+          talkTogether(pick(VISIT_TALKS));
+        },
+      });
+      if (usePixieStore.getState().chatty) setTimeout(() => visit?.stage === "coming" && say(guestSays(pick(VISIT_HELLO))), 600);
+    };
+    // she's carried off or called away mid-visit: off he goes
+    const cutVisit = () => {
+      if (!visit || visit.stage === "going") return;
+      guestUp();
+      visit = { stage: "going", next: 0 };
+      guest.leave(guestGone);
+      setTimeout(() => {
+        if (!play.busy() && usePixieStore.getState().chatty) say(guestSays(pick(VISIT_CUT)));
+      }, 1800);
+    };
+    // a visit, a step at a time, once what they're saying is said
+    const stepVisit = (now) => {
+      if (!visit || play.busy() || now < visit.next) return;
+      if (visit.stage === "talk") {
+        visit = { stage: "ask", next: now + 1200 };
+        talkTogether([pick(HUG_ASK)]);
+      } else if (visit.stage === "ask") {
+        things.hug(true);
+        visit = { stage: "hug", next: now + HUG_FOR };
+        setTimeout(() => visit?.stage === "hug" && talkTogether([pick(HUG_SAYS)]), 1500);
+      } else if (visit.stage === "hug") {
+        things.hug(false);
+        visit = { stage: "bye", next: now + 2500 };
+        talkTogether(pick(VISIT_BYE));
+      } else if (visit.stage === "bye") {
+        guestUp();
+        visit = { stage: "going", next: Infinity };
+        // a wave goodbye, then away
+        guest.act("raise", 1.4);
+        setTimeout(() => visit?.stage === "going" && guest.leave(guestGone), 1400);
+      }
+    };
+    const sitOnBench = () => {
+      if (usePixieStore.getState().chatty) say(pick(BENCH_START));
+      person.work({
+        at: () => things.benchSpot("her"),
+        pose: "stand",
+        face: 1,
+        seconds: Infinity, // till she gets up (benchUntil)
+        onStart: () => {
+          onBench = true;
+          things.sit("her", true);
+          person.setHidden(true);
+          benchUntil = performance.now() + between(...BENCH_FOR);
+          thinkAt = performance.now() + between(2500, 4500);
+          if (guest && Math.random() < VISIT_CHANCE) visitAt = performance.now() + between(...VISIT_AFTER);
+        },
+        onEnd: () => {
+          if (!onBench) return;
+          onBench = false;
+          visitAt = 0;
+          things.sit("her", false);
+          person.setHidden(false);
+          workAt = performance.now() + between(...WORK_EVERY);
+          cutVisit();
+        },
+      });
+    };
+    // his visit, from the watch below
+    const benchWatch = (now) => {
+      stepVisit(now);
+      if (!onBench) return;
+      if (visitAt && now >= visitAt && !visit && !play.busy() && !fullScreen()) startVisit();
+      else if (!visit && !visitAt && now >= benchUntil && !play.busy()) person.stopWork();
+    };
 
     const birdTalks = () => {
       if (!things.birdSay) return;
@@ -206,11 +359,20 @@ const CompanionOnScreen = ({ who }) => {
 
     // a click on them is their next line, in turn
     talk.current = () => {
+      // with Gourav: a word about him
+      if (visit) {
+        say(pick(VISIT_CLICK[who]));
+        return;
+      }
       const lines = CLICKS[who];
       const next = lines[clicks.current % lines.length];
       clicks.current += 1;
-      say(next);
+      // on her bench she stays sitting (no pose)
+      say(onBench && typeof next !== "string" ? next.text : next);
     };
+    // a click on Gourav, walking in or off
+    const guestClick = () => say(guestSays(pick(VISIT_CLICK.gourav)));
+    guestCanvas?.addEventListener("click", guestClick);
 
     // press and drag to pick them up (out of his chair, too); let go and
     // down they drop. A press that doesn't move is a click.
@@ -246,6 +408,7 @@ const CompanionOnScreen = ({ who }) => {
     let frame = 0;
     const loop = (ms) => {
       person.tick(ms / 1000);
+      guest?.tick(ms / 1000);
       things.tick(ms / 1000);
       frame = requestAnimationFrame(loop);
     };
@@ -261,6 +424,8 @@ const CompanionOnScreen = ({ who }) => {
       stage.current?.classList.toggle("hidden", hide);
       things.setHidden(!thingsOn());
       if (hide && play.busy()) play.stop();
+      // her bench is hidden: she gets up off it
+      if (!thingsOn() && onBench) person.stopWork();
     };
     sync();
     const offSettings = usePixieStore.subscribe(sync);
@@ -441,7 +606,16 @@ const CompanionOnScreen = ({ who }) => {
     const report = () => {
       const vitals = {
         who,
-        doing: coffeeRun ? "coffee" : reading && person.working() ? "read" : person.doing(),
+        doing: coffeeRun
+          ? "coffee"
+          : reading && person.working()
+            ? "read"
+            : onBench && visit && !["coming", "going"].includes(visit.stage)
+              ? "date"
+              : onBench
+                ? "bench"
+                : person.doing(),
+        visits,
         thought: thoughts[0]?.text ?? "",
         thoughts: [...thoughts],
         mugs,
@@ -486,12 +660,14 @@ const CompanionOnScreen = ({ who }) => {
         say({ text: pick(CALLED[who]), pose: "raise" });
         return;
       }
+      benchWatch(now);
 
       // to their desk or easel now and then
       if (now >= workAt && person.free() && ok) {
         workAt = now + between(...WORK_EVERY);
         if (thingsOn() && !fullScreen()) {
           if (who === "gourav" && Math.random() < READ_EVERY) readBook();
+          else if (who === "her" && Math.random() < BENCH_EVERY) sitOnBench();
           else startWork();
           return;
         }
@@ -503,7 +679,10 @@ const CompanionOnScreen = ({ who }) => {
         thinkAt = now + between(...THINK_EVERY);
         const roll = Math.random();
         if (who === "gourav" && reading) think(pick(READ_THOUGHTS));
-        else if (who === "gourav") {
+        // on her bench: thinking of him, or the park (not while he's there)
+        else if (onBench) {
+          if (!visit) think(pick(BENCH_THOUGHTS));
+        } else if (who === "gourav") {
           // mostly coffee and her; now and then the code
           if (things.sipsLeft() <= 0) {
             think(pick(EMPTY_MUG));
@@ -524,7 +703,8 @@ const CompanionOnScreen = ({ who }) => {
         upAt = 0;
         if (things.seated?.() && person.working()) goForCoffee();
       }
-      if (!ok) return;
+      // resting on her bench: no tips or remarks meanwhile
+      if (!ok || onBench) return;
 
       // a tip now and then, or a word to themselves
       if (now >= tipAt) {
@@ -547,6 +727,7 @@ const CompanionOnScreen = ({ who }) => {
       cancelAnimationFrame(frame);
       clearInterval(watch);
       canvas.removeEventListener("pointerdown", grab);
+      guestCanvas?.removeEventListener("click", guestClick);
       window.removeEventListener("cast:call", onCall);
       offMusic();
       usePixieStore.setState({ castVitals: null });
@@ -567,26 +748,29 @@ const CompanionOnScreen = ({ who }) => {
     return () => clearInterval(timer);
   }, [line]);
 
+  // a line in the bubble over whoever says it: them, or Gourav visiting her
+  const bubble = line && (
+    <button
+      key={line.id}
+      type="button"
+      className={clsx("pixie-bubble cast-bubble", line.kind === "thought" && "thought")}
+      onClick={() => script.current?.stop()}
+      title="Click to close"
+    >
+      <b className="cast-name">{NAMES[line.who]}</b>
+      {line.picture && <ThoughtPicture name={line.picture} />}
+      <span aria-hidden="true">{line.text.slice(0, typed)}</span>
+      <span className="sr-only" role="status">
+        {`${NAMES[line.who]}: ${line.text}`}
+      </span>
+    </button>
+  );
+
   return (
     <div ref={stage} className="cast">
       <div ref={layer} className="cast-things" />
       <div ref={root} className={clsx("cast-person", who)} style={CAST_SIZE[who]}>
-        {line && (
-          <button
-            key={line.id}
-            type="button"
-            className={clsx("pixie-bubble cast-bubble", line.kind === "thought" && "thought")}
-            onClick={() => script.current?.stop()}
-            title="Click to close"
-          >
-            <b className="cast-name">{NAMES[who]}</b>
-            {line.picture && <ThoughtPicture name={line.picture} />}
-            <span aria-hidden="true">{line.text.slice(0, typed)}</span>
-            <span className="sr-only" role="status">
-              {`${NAMES[who]}: ${line.text}`}
-            </span>
-          </button>
-        )}
+        {line?.who === who && bubble}
         <canvas
           width={CAST_SIZE[who].width}
           height={CAST_SIZE[who].height}
@@ -601,6 +785,17 @@ const CompanionOnScreen = ({ who }) => {
           }}
         />
       </div>
+      {who === "her" && (
+        <div ref={guestRoot} className="cast-person gourav guest" style={CAST_SIZE.gourav}>
+          {line?.who === "gourav" && bubble}
+          <canvas
+            width={CAST_SIZE.gourav.width}
+            height={CAST_SIZE.gourav.height}
+            className="cast-sprite"
+            aria-label="Gourav, come to see her"
+          />
+        </div>
+      )}
     </div>
   );
 };
