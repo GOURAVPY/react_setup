@@ -257,6 +257,8 @@ const CompanionOnScreen = ({ who }) => {
     // she's carried off or called away mid-visit: off he goes
     const cutVisit = () => {
       if (!visit || visit.stage === "going") return;
+      // what they were saying stops there
+      play.stop();
       guestUp();
       visit = { stage: "going", next: 0 };
       guest.leave(guestGone);
