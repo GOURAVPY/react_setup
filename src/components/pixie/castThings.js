@@ -3,10 +3,14 @@
 // computer, coffee and chair (he sits in it to code, his back to you), is on
 // the left; his coffee machine and his bookshelf (he reads a book from it now
 // and then) are over on the right; and his cleaning robot sweeps the floor;
-// her easel, with Neel her parakeet on it, is on the right. Call
-// tick(seconds) every frame.
+// her easel, with Neel her parakeet on it, is on the right, and her park
+// bench, by a blossom tree, on the left (she sits there now and then, and
+// Gourav comes to sit with her). Call tick(seconds) every frame.
 
 import {
+  BENCH,
+  BENCH_PALETTE,
+  BENCH_TOP,
   BIRD_FEET,
   BIRD_FRAMES,
   BIRD_H,
@@ -32,12 +36,16 @@ import {
   EASEL_H,
   EASEL_PALETTE,
   EASEL_W,
+  HUG_ARMS,
   MUG,
   MUG_AT,
   MUG_X,
   PAINTINGS,
   PAINT_AT,
   PAINT_PALETTE,
+  PARK_H,
+  PARK_SEATS,
+  PARK_W,
   ROBOT_FRAMES,
   ROBOT_H,
   ROBOT_PALETTE,
@@ -54,8 +62,14 @@ import {
   SIP_MUG_AT,
   SPOUT,
   STEAM,
+  TREE,
+  TREE_H,
+  TREE_PALETTE,
+  TREE_W,
 } from "./castArt";
-import { GOURAV_PALETTE } from "./gourav";
+import { GOURAV_FRAMES, GOURAV_PALETTE, GOURAV_W } from "./gourav";
+import { HER_FRAMES, HER_PALETTE, HER_W } from "./her";
+import { shut } from "./cast";
 import { BIRD_NAME, ROBOT_NAME } from "./castLines";
 import useMusicStore from "../../store/music";
 import * as synth from "../../music/synth";
@@ -71,6 +85,8 @@ const STEAM_EVERY = 0.5; // s per puff of steam
 const DAB_EVERY = 0.22; // s per dab of paint
 const HOP_TIME = 0.4; // s
 const HOP_HEIGHT = 10; // px
+const MOUTH_EVERY = 0.12; // s per mouth open or shut, talking on the bench
+const HEARTS_EVERY = 0.9; // s between hearts floating up from a hug
 
 const between = (min, max) => min + Math.random() * (max - min);
 
@@ -631,7 +647,11 @@ const createGouravThings = ({ layer, onTouch, onPerson }) => {
 
 const PICTURES = Object.keys(PAINTINGS);
 
-const createHerThings = ({ layer, onTouch, onPainted }) => {
+const createHerThings = ({ layer, onTouch, onPainted, onPerson }) => {
+  // her park corner: a blossom tree, and her bench in front of it
+  const tree = makeThing(layer, TREE_W, TREE_H, "Her blossom tree");
+  paint(tree.ctx, TREE, TREE_PALETTE);
+  const park = makeThing(layer, PARK_W, PARK_H, "Her park bench");
   const easel = makeThing(layer, EASEL_W, EASEL_H, "Her easel");
   // Neel, on the top of her canvas
   const bird = createBird({
@@ -681,11 +701,79 @@ const createHerThings = ({ layer, onTouch, onPainted }) => {
   };
 
   easel.onPress(() => onTouch(finished ? "easelDone" : "easel"));
+  tree.onPress(() => {
+    tree.puff("🌸", "note");
+    onTouch("tree");
+  });
+
+  // who's on the bench, drawn in it (their own sprites hidden meanwhile):
+  // her, Gourav beside her, and whether they're hugging; whose mouth moves
+  const bench = { her: false, him: false, hug: false };
+  const talking = { her: false, gourav: false };
+  const blinks = { her: { at: between(2, 5), until: 0 }, gourav: { at: between(2, 5), until: 0 } };
+  let heartAt = 0;
+  let drawnPark = "";
+  const seatX = (who) => (bench.hug ? PARK_SEATS.hug[who].x : PARK_SEATS[who].x);
+  const drawPark = (frames) => {
+    const { ctx } = park;
+    ctx.clearRect(0, 0, PARK_W * SCALE, PARK_H * SCALE);
+    paint(ctx, BENCH, BENCH_PALETTE, 0, BENCH_TOP);
+    // her, then him, then the arms that show round each other in a hug
+    if (bench.her) paint(ctx, frames.her, HER_PALETTE, seatX("her"));
+    if (bench.him) paint(ctx, frames.him, GOURAV_PALETTE, seatX("him"));
+    if (bench.hug) {
+      HUG_ARMS.his.forEach(([x, y, text]) => paint(ctx, [text], GOURAV_PALETTE, x, y));
+      HUG_ARMS.hers.forEach(([x, y, text]) => paint(ctx, [text], HER_PALETTE, x, y));
+    }
+  };
+  // which picture each of them is, sitting there: hugging (eyes shut),
+  // talking, or blinking
+  const sitting = (frames, name, who, now) => {
+    const pose = bench.hug ? "hug" : "sit";
+    const mouth = talking[who] && Math.floor(now / MOUTH_EVERY) % 2;
+    const grid = frames[mouth ? `${pose}Talk` : pose];
+    return bench.hug || now < blinks[who].until ? { key: `${name}${mouth ? "o" : ""}-`, grid: shut(grid) } : { key: `${name}${mouth ? "o" : ""}`, grid };
+  };
+
+  // where on the bench a pointer is, in art pixels: on her (grab her), on
+  // him (he says something), or the bench
+  const onSitter = (e, who) => {
+    const x = e.offsetX / SCALE - seatX(who);
+    const y = e.offsetY / SCALE;
+    return bench[who] && x >= 5 && x < (who === "her" ? HER_W : GOURAV_W) - 5 && y >= 2 && y < PARK_H;
+  };
+  park.canvas.addEventListener("pointerdown", (e) => {
+    if (onSitter(e, "her")) onPerson?.(e);
+  });
+  park.onPress((e) => {
+    if (e.type === "click" && onSitter(e, "her")) return;
+    if (e.type === "click" && onSitter(e, "him")) onTouch("guest");
+    else onTouch("bench");
+  });
 
   const easelLeft = () => window.innerWidth - EDGE - 30 - EASEL_W * SCALE;
+  const treeLeft = () => EDGE + 6;
+  const parkLeft = () => treeLeft() + TREE_W * SCALE - 20;
 
   return {
     spot: () => easelLeft() - STAND_BACK,
+    // where she (or Gourav, "him") sits on the bench: their middle, in px
+    benchSpot: (who) => parkLeft() + (PARK_SEATS[who].x + (who === "her" ? HER_W : GOURAV_W) / 2) * SCALE,
+    // she (or he) sits down on the bench, or gets up
+    sit(who, on) {
+      bench[who] = on;
+      if (!on) bench.hug = false;
+    },
+    // side by side on the bench, a hug, with hearts floating up
+    hug(on) {
+      bench.hug = on && bench.her && bench.him;
+      heartAt = 0;
+    },
+    // whose mouth moves as they talk on the bench ("her" or "gourav")
+    mouth(who, on) {
+      talking[who] = on;
+    },
+    hearts: () => park.puff("💕", "note"),
     birdSay: (text) => bird.say(text),
     setBusy(on) {
       painting = on;
@@ -720,7 +808,28 @@ const createHerThings = ({ layer, onTouch, onPainted }) => {
         drawEasel();
       }
 
-      easel.place(easelLeft(), floorLine() - EASEL_H * SCALE);
+      // the bench, and whoever's on it
+      Object.values(blinks).forEach((blink) => {
+        if (now < blink.at) return;
+        blink.until = now + 0.13;
+        blink.at = now + between(2.5, 5.5);
+      });
+      if (bench.hug && now >= heartAt) {
+        heartAt = now + HEARTS_EVERY;
+        park.puff(Math.random() < 0.7 ? "💕" : "❤️", "note");
+      }
+      const her = bench.her ? sitting(HER_FRAMES, "her", "her", now) : null;
+      const him = bench.him ? sitting(GOURAV_FRAMES, "him", "gourav", now) : null;
+      const parkKey = [her?.key, him?.key, bench.hug].join(":");
+      if (parkKey !== drawnPark) {
+        drawnPark = parkKey;
+        drawPark({ her: her?.grid, him: him?.grid });
+      }
+
+      const floor = floorLine();
+      tree.place(treeLeft(), floor - TREE_H * SCALE);
+      park.place(parkLeft(), floor - PARK_H * SCALE);
+      easel.place(easelLeft(), floor - EASEL_H * SCALE);
       bird.tick(now);
     },
   };
@@ -729,15 +838,16 @@ const createHerThings = ({ layer, onTouch, onPainted }) => {
 /**
  * The things of the visitor's companion, on `layer`. onTouch(name) when one
  * is clicked: "desk", "mug", "machine", "shelf", "robot" (his), "easel",
- * "easelDone" or "bird" (her parakeet);
+ * "easelDone", "bird" (her parakeet), "tree", "bench" or "guest" (Gourav,
+ * visiting her on the bench);
  * onPainted(picture) when she finishes a painting; onPerson(pointerdown) when
- * Gourav is grabbed in his chair.
+ * Gourav is grabbed in his chair, or she is on her bench.
  */
 export const createCastThings = (who, { layer, onTouch, onPainted, onPerson }) => {
   const things =
     who === "gourav"
       ? createGouravThings({ layer, onTouch, onPerson })
-      : createHerThings({ layer, onTouch, onPainted });
+      : createHerThings({ layer, onTouch, onPainted, onPerson });
   return {
     ...things,
     setHidden(hidden) {
