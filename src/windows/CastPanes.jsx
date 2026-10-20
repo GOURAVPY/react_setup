@@ -20,6 +20,8 @@ const DOING = {
   coffee: () => "Getting a coffee ☕",
   dance: () => "Dancing to the music 🎶",
   read: () => "Reading a book 📖",
+  bench: () => "Sitting on her park bench 🌳",
+  date: () => "On the bench with Gourav 💕",
   held: () => "Being carried!",
   fall: () => "Falling!",
 };
@@ -42,6 +44,7 @@ const pose = (who, doing, beat) => {
   if (doing === "held" || doing === "fall") return "jump";
   if (doing === "dance") return beat % 2 ? "jump" : "raise";
   if (doing === "read") return beat % 12 === 11 ? "stand" : "read";
+  if (doing === "bench" || doing === "date") return beat % 16 === 15 ? "sitBlink" : "sit";
   if (doing === "work") return who === "gourav" ? (beat % 2 ? "seatedB" : "seatedA") : "paint";
   if (doing === "coffee") return beat % 2 ? "mugStep" : "mug";
   if (doing === "walk" || doing === "arriving") return beat % 2 ? "step" : "stand";
@@ -68,6 +71,7 @@ export const CastPortrait = ({ who, doing = "idle", size = "large" }) => {
         paint(ctx, SEATED_FRAMES[name === "seatedA" ? "a" : "b"], palette, 1, 1);
         paint(ctx, CHAIR, DESK_PALETTE, 1, 17);
       } else if (name === "blink") paint(ctx, shut(frames.stand), palette);
+      else if (name === "sitBlink") paint(ctx, shut(frames.sit), palette);
       else paint(ctx, frames[name] ?? frames.stand, palette);
       beat += 1;
     };
@@ -219,6 +223,11 @@ export const CastTodayPane = ({ who }) => {
               <span aria-hidden="true">🖌️</span>
               <b>{Math.round((vitals?.painting ?? 0) * 100)}%</b>
               <small>of the next one</small>
+            </div>
+            <div>
+              <span aria-hidden="true">💕</span>
+              <b>{vitals?.visits ?? 0}</b>
+              <small>visits from Gourav</small>
             </div>
           </div>
           {vitals?.paintings.length > 0 && (
