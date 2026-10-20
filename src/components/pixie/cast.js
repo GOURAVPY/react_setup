@@ -2,7 +2,7 @@
 // one of them as their companion (Companions.jsx): they walk in, stroll
 // about the floor, blink, wave and hop, work at their things (castThings.js),
 // can be picked up and dropped, and move their mouths while their bubbles
-// fill in.
+// fill in. Gourav also comes to visit her, walking in and off again.
 
 import { GOURAV_FRAMES, GOURAV_H, GOURAV_PALETTE, GOURAV_W } from "./gourav";
 import { HER_FRAMES, HER_H, HER_PALETTE, HER_W } from "./her";
@@ -136,6 +136,7 @@ export const createPerson = (who, { root, canvas, still, onLand, beat }) => {
     vy: 0, // px/s, falling
     holding: null, // something in their hand ("mug": the "mug" and "mugStep" poses)
     danceUntil: 0, // s: dancing to the music till then
+    leaving: null, // walking off the screen: what to do once they're gone
   };
   let drawn = "";
   let placed = "";
@@ -209,11 +210,11 @@ export const createPerson = (who, { root, canvas, still, onLand, beat }) => {
           job.onStart?.();
         } else if (job.until && now >= job.until) endJob(true);
       }
-      // on the screen, even when it gets smaller
-      if (!me.rush && !aloft) me.target = clampTo(me.target);
+      // on the screen, even when it gets smaller (unless they're off)
+      if (!me.rush && !me.leaving && !aloft) me.target = clampTo(me.target);
 
       // a stroll now and then, unless busy
-      if (!still && !me.job && !aloft && now >= me.strollAt) {
+      if (!still && !me.job && !me.leaving && !aloft && now >= me.strollAt) {
         me.strollAt = now + between(...STROLL_EVERY);
         if (!me.talking && !me.pose) {
           let to = me.x + between(-REACH, REACH);
@@ -231,6 +232,11 @@ export const createPerson = (who, { root, canvas, still, onLand, beat }) => {
         me.facing = way;
       } else {
         me.rush = false;
+        if (me.leaving) {
+          const gone = me.leaving;
+          me.leaving = null;
+          gone();
+        }
         if (me.job?.until) me.facing = me.job.face;
         else if (me.lookAt !== null) {
           const way = Math.sign(me.lookAt - me.x);
@@ -378,14 +384,23 @@ export const createPerson = (who, { root, canvas, still, onLand, beat }) => {
       me.strollAt = performance.now() / 1000 + between(...STROLL_EVERY);
     },
 
-    // walks in from the left side of the screen
-    enter() {
+    // walks in from the left side of the screen, quickly unless not rush
+    enter(rush = true) {
       endJob(false);
       me.x = -width;
       me.target = art.home();
-      me.rush = true;
+      me.rush = rush;
       me.lookAt = null;
       me.strollAt = performance.now() / 1000 + between(...STROLL_EVERY);
+    },
+
+    // walks off the left side of the screen, then onGone()
+    leave(onGone) {
+      endJob(false);
+      me.pose = null;
+      me.lookAt = null;
+      me.target = -width;
+      me.leaving = onGone ?? (() => {});
     },
 
     // goes over and works there: { at() (a screen x), pose, seconds, face,
