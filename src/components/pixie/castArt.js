@@ -556,3 +556,83 @@ export const BIRD_FRAMES = {
 };
 // where his feet are, from the top of his picture
 export const BIRD_FEET = 13;
+
+// her park corner (castThings.js): a wooden park bench on iron legs, where
+// she sits now and then (and Gourav comes to sit with her), and a little tree
+// in blossom beside it. The bench is drawn at the bottom of a taller picture,
+// with whoever sits on it (her.js, gourav.js) drawn in it too.
+export const PARK_W = 40;
+export const PARK_H = 30;
+export const BENCH_TOP = 13; // the row of the picture its back starts on
+export const BENCH_PALETTE = {
+  K: "#1b1424",
+  D: "#c08552", // wood
+  d: "#8a5a34", // wood shade
+  I: "#3d3a4a", // iron
+  i: "#6b6880", // iron shine
+};
+export const BENCH = [
+  "..KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK..",
+  "..KDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDK..",
+  "..KddddddddddddddddddddddddddddddddddK..",
+  "..KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK..",
+  "...KiK..........................KiK.....",
+  "..KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK..",
+  "..KDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDK..",
+  "..KddddddddddddddddddddddddddddddddddK..",
+  "KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK",
+  "KDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDK",
+  "KDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDK",
+  "KddddddddddddddddddddddddddddddddddddddK",
+  "KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK",
+  "..KIiK..........................KIiK....",
+  "..KIIK..........................KIIK....",
+  "..KIIK..........................KIIK....",
+  ".KKKKKK........................KKKKKK...",
+];
+// where the seat is: the row its top is on, in the picture
+export const SEAT_Y = BENCH_TOP + 8;
+
+export const TREE_W = 24;
+export const TREE_H = 40;
+export const TREE_PALETTE = {
+  K: "#1b1424",
+  L: "#3fa34d", // leaves
+  l: "#2b7a3a", // leaves in shade
+  g: "#7ed38a", // leaves in the sun
+  P: "#ffafcc", // blossom
+  p: "#ff7aa8", // blossom, deeper
+  T: "#8a5a34", // trunk
+  t: "#5e3c22", // trunk shade
+  G: "#3fa34d", // grass at its foot
+};
+export const TREE = (() => {
+  const grid = Array.from({ length: TREE_H }, () => Array(TREE_W).fill("."));
+  const set = (x, y, c) => {
+    if (grid[y]?.[x] !== undefined) grid[y][x] = c;
+  };
+  // the trunk, wider at the foot
+  for (let y = 18; y < TREE_H - 1; y++) {
+    const wide = y > TREE_H - 5 ? 1 : 0;
+    for (let x = 10 - wide; x <= 13 + wide; x++) set(x, y, x === 10 - wide || x === 13 + wide ? "K" : x === 12 + wide ? "t" : "T");
+  }
+  // the leaves: a round crown in three shades, outlined
+  const inCrown = (x, y) => ((x - 11.5) / 11) ** 2 + ((y - 11) / 10.5) ** 2 <= 1;
+  for (let y = 0; y < 23; y++) {
+    for (let x = 0; x < TREE_W; x++) {
+      if (!inCrown(x, y)) continue;
+      const edge = !inCrown(x - 1, y) || !inCrown(x + 1, y) || !inCrown(x, y - 1) || !inCrown(x, y + 1);
+      const light = x + y < 14;
+      const dark = x - y > 6 || y > 16;
+      set(x, y, edge ? "K" : light ? "g" : dark ? "l" : "L");
+    }
+  }
+  // blossom dotted about it
+  [[6, 5], [12, 3], [17, 6], [4, 11], [10, 9], [15, 12], [19, 10], [8, 15], [13, 17], [18, 16], [5, 18]].forEach(([x, y]) => {
+    set(x, y, "P");
+    set(x + 1, y, "p");
+  });
+  // a tuft of grass round its foot
+  for (let x = 7; x <= 16; x++) set(x, TREE_H - 1, x % 3 ? "G" : "K");
+  return grid.map((row) => row.join(""));
+})();
