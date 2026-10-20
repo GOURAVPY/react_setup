@@ -4,6 +4,7 @@ import './index.css'
 import App from './App.jsx'
 import runBootScreen from './boot.js'
 import './store/wallpaper.js'
+import './store/text.js'
 
 runBootScreen()
 

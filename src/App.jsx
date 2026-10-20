@@ -1,5 +1,7 @@
 import gsap from "gsap";
 import Pixie from "./components/pixie/Pixie";
+import Companions from "./components/pixie/Companions";
+import CompanionPicker from "./components/pixie/CompanionPicker";
 import { Draggable } from "gsap/Draggable";
 import {
   Terminal,
@@ -13,6 +15,8 @@ import {
   Settings,
   Arcade,
   PixieApp,
+  Book,
+  Music,
 } from "./windows";
 import {
   Navbar,
@@ -35,6 +39,8 @@ const App = () => {
       <Dock />
       <MobileHome />
       <Pixie />
+      <Companions />
+      <CompanionPicker />
 
       <Terminal />
       <Safari />
@@ -46,6 +52,8 @@ const App = () => {
       <Settings />
       <Arcade />
       <PixieApp />
+      <Book />
+      <Music />
       <Contact />
       <Home />
       <Login />

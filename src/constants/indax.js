@@ -73,9 +73,21 @@ const dockApps = [
     canOpen: true,
   },
   {
+    id: "music",
+    name: "Music",
+    icon: "music.svg",
+    canOpen: true,
+  },
+  {
     id: "pixie",
     name: "Pixie",
     icon: "pixie.svg",
+    canOpen: true,
+  },
+  {
+    id: "book",
+    name: "Gourav's Book",
+    icon: "book.svg",
     canOpen: true,
   },
   {
@@ -229,9 +241,23 @@ export {
   gallery,
 };
 
-// A project folder in Finder: a .txt saying what it is, plus its links.
+// where a folder's files sit inside Finder, in reading order, three to a row
+const FILE_SPOTS = [
+  "top-6 left-6",
+  "top-6 left-[200px]",
+  "top-6 left-[380px]",
+  "top-[150px] left-6",
+  "top-[150px] left-[200px]",
+  "top-[150px] left-[380px]",
+  "top-[294px] left-6",
+  "top-[294px] left-[200px]",
+  "top-[294px] left-[380px]",
+];
+
+// A project folder in Finder: a .txt saying what it is, then its screenshots
+// (`images`, kept in public/images/projects) and its links.
 // `position` places the folder inside Finder, `windowPosition` on the desktop.
-const project = ({ id, name, position, windowPosition, subtitle, description, links = [] }) => ({
+const project = ({ id, name, position, windowPosition, subtitle, description, images = [], links = [] }) => ({
   id,
   name,
   icon: "/images/folder.png",
@@ -239,26 +265,22 @@ const project = ({ id, name, position, windowPosition, subtitle, description, li
   position,
   windowPosition,
   children: [
-    {
-      id: 1,
-      name: `${name}.txt`,
-      icon: "/images/txt.png",
+    { name: `${name}.txt`, icon: "/images/txt.png", kind: "file", fileType: "txt", subtitle, description },
+    ...images.map((image) => ({
+      name: image.name,
+      icon: "/images/image.png",
       kind: "file",
-      fileType: "txt",
-      position: "top-6 left-6",
-      subtitle,
-      description,
-    },
-    ...links.map((link, i) => ({
-      id: i + 2,
+      fileType: "img",
+      imageUrl: image.src,
+    })),
+    ...links.map((link) => ({
       name: link.name,
       icon: "/images/safari.png",
       kind: "file",
       fileType: "url",
       href: link.href,
-      position: i === 0 ? "top-6 left-[200px]" : "top-6 left-[380px]",
     })),
-  ],
+  ].map((file, i) => ({ id: i + 1, position: FILE_SPOTS.at(i), ...file })),
 });
 
 // Company projects say whose they are
@@ -274,10 +296,51 @@ const WORK_LOCATION = {
   kind: "folder",
   children: [
     project({
-      id: 10,
-      name: "AI Resume Builder",
+      id: 14,
+      name: "Live City 3D",
       position: "top-6 left-6",
       windowPosition: "top-[12vh] left-7",
+      subtitle: "Every train in London, live, in 3D",
+      description: [
+        "A 3D map of London where about 500 Tube, Elizabeth line and Overground trains move along the real track, under the streets and over the viaducts, with every aircraft overhead too.",
+        "TfL doesn't publish where its trains are, only countdowns such as “train 241 reaches Warren Street in 95 seconds”. I work backwards from those countdowns to a point on the real track, then animate every train between updates.",
+        "Click a train to see its next stops and follow it with the camera, or a station for its live departures board. Scrub back through the last 24 hours at up to 600x, with delay alerts, day and night by London's real sunset, and a phone layout.",
+        "Tech: React, TypeScript, MapLibre GL, Three.js, Node.js, Express, Socket.IO, TfL open data, OpenStreetMap track data.",
+      ],
+      images: [
+        { name: "rush-hour.jpg", src: "/images/projects/live-city-rush-hour.jpg" },
+        { name: "follow-a-train.jpg", src: "/images/projects/live-city-follow.jpg" },
+      ],
+      links: [
+        { name: "Code on GitHub", href: "https://github.com/GOURAVPY/3d-UK-" },
+        { name: "Demo video", href: "https://github.com/GOURAVPY/3d-UK-/blob/main/docs/demo/demo.mp4" },
+      ],
+    }),
+    project({
+      id: 15,
+      name: "AI Interview Coach",
+      position: "top-6 left-[200px]",
+      windowPosition: "top-[12vh] left-32",
+      subtitle: "Practise your interview for a job abroad with an AI that talks back",
+      description: [
+        "A live voice interviewer that speaks with you in English, German, Japanese, Dutch, French or Spanish. It asks questions for the job you choose, follows up on your answers, and gives you a scored report at the end.",
+        "The report has a score out of 100, feedback and a stronger example answer for each question, your filler words and speaking speed. A coding round has AI-written problems with hidden tests, hints and a review.",
+        "I built it to prepare for working abroad. The voice streams straight to Gemini Live so replies feel instant, the API key never reaches the browser, and voice time is capped so the bill stays small.",
+        "Tech: React, TypeScript, Vite, CodeMirror 6, Gemini Live API, Node.js, Express, Zod, MongoDB, JWT login.",
+      ],
+      images: [
+        { name: "interview-room.jpg", src: "/images/projects/interview-room.jpg" },
+        { name: "report.jpg", src: "/images/projects/interview-report.jpg" },
+        { name: "progress.jpg", src: "/images/projects/interview-progress.jpg" },
+        { name: "coding-round.jpg", src: "/images/projects/interview-coding-round.jpg" },
+      ],
+      links: [{ name: "Code on GitHub", href: "https://github.com/GOURAVPY/AI-Interview-Coach" }],
+    }),
+    project({
+      id: 10,
+      name: "AI Resume Builder",
+      position: "top-6 left-[380px]",
+      windowPosition: "top-[26vh] left-7",
       subtitle: "Write a résumé with AI and download it as a PDF",
       description: [
         "A full-stack résumé builder with AI help: write and improve your résumé with AI, then download it as a PDF.",
@@ -552,6 +615,20 @@ const WINDOW_CONFIG = {
     data: null,
   },
   settings: {
+    isOpen: false,
+    isMaximized: false,
+    isMinimized: false,
+    zIndex: INITIAL_Z_INDEX,
+    data: null,
+  },
+  book: {
+    isOpen: false,
+    isMaximized: false,
+    isMinimized: false,
+    zIndex: INITIAL_Z_INDEX,
+    data: null,
+  },
+  music: {
     isOpen: false,
     isMaximized: false,
     isMinimized: false,

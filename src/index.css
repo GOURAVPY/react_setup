@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Georama:ital,wght@0,100..900;1,100..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Georama:ital,wght@0,100..900;1,100..900&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Pixelify+Sans:wght@400..700&family=VT323&display=swap");
 
 @import "tailwindcss";
 
@@ -17,7 +17,91 @@ body {
 @theme {
     --font-georama: "Georama", sans-serif;
     --font-roboto: "Roboto Mono", monospace;
+    --font-pixel: "Pixelify Sans", "Roboto Mono", monospace;
     --breakpoint-3xl: 1920px;
+}
+
+/* Text style (store/text.js): with "pixel", all the text is in the pixel
+   font, to go with the Pixel icons. The fonts are theme variables, so
+   everything that uses them follows; the Skills terminal gets VT323, a pixel
+   font whose letters are all one width, so its columns still line up. */
+:root[data-text="pixel"] {
+    --font-georama: "Pixelify Sans", "Georama", sans-serif;
+    --font-roboto: "Pixelify Sans", "Roboto Mono", monospace;
+
+    body {
+        font-family: var(--font-pixel);
+    }
+
+    /* except the big welcome, which keeps its own font: slanted, and growing
+       bolder where the pointer passes */
+    #welcome {
+        --font-georama: "Georama", sans-serif;
+    }
+
+    #terminal {
+        --font-roboto: "VT323", "Roboto Mono", monospace;
+
+        .techstack {
+            font-size: 1.15rem;
+            line-height: 1.45;
+        }
+    }
+}
+
+/* Colour tokens — override to re-skin the effect:
+   --ink    main text colour (defaults to currentColor)
+   --ink-2  primary accent   --ink-3  secondary accent */
+:root {
+    --ink: currentColor;
+    --ink-2: #ff4fd8;
+    --ink-3: #4ff8ff;
+}
+
+/* Echo-Verse: ghost copies of the words ripple outward. On the welcome
+   (Welcome.jsx) while the Music app plays; the words keep their own font. */
+.fx-echo {
+    position: relative;
+    color: var(--ink);
+
+    &::before,
+    &::after {
+        content: attr(data-text);
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        animation: fx-echo 2s ease-out infinite;
+    }
+
+    &::before {
+        color: var(--ink-2);
+    }
+
+    &::after {
+        color: var(--ink-3);
+        animation-delay: 1s;
+    }
+}
+
+@keyframes fx-echo {
+    0% {
+        opacity: 0.8;
+        transform: scale(1);
+        filter: blur(0);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(1.9);
+        filter: blur(3px);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fx-echo::before,
+    .fx-echo::after {
+        animation: none;
+        opacity: 0;
+    }
 }
 
 @utility flex-center {
@@ -57,7 +141,7 @@ body {
         }
 
         time {
-            @apply text-sm font-medium text-black;
+            @apply text-sm font-medium text-black whitespace-nowrap;
         }
 
         .spotlight-button {
@@ -889,6 +973,34 @@ body {
             @apply mt-5 rounded-lg border border-gray-200 bg-gray-50 divide-y divide-gray-200 text-sm;
         }
 
+        /* text styles: an "Aa" in each */
+        .text-styles {
+            @apply flex gap-4 mt-3;
+
+            button {
+                @apply flex flex-col items-center gap-1.5 text-xs font-medium cursor-pointer;
+
+                &[aria-checked="true"] .preview {
+                    outline: 3px solid #3b82f6;
+                }
+            }
+
+            .preview {
+                @apply grid place-items-center w-24 h-16 rounded-lg text-3xl text-white;
+                outline: 1px solid rgb(128 128 128 / 0.4);
+                outline-offset: 2px;
+                background: linear-gradient(135deg, #4f46e5, #1e3a8a);
+
+                &.pixel {
+                    font-family: "Pixelify Sans", monospace;
+                }
+
+                &.classic {
+                    font-family: ui-sans-serif, system-ui, sans-serif;
+                }
+            }
+        }
+
         .icon-styles {
             @apply grid grid-cols-5 gap-2.5;
 
@@ -1134,6 +1246,68 @@ body {
         .empty {
             @apply mt-6 text-sm text-gray-500;
         }
+
+        /* Gourav or someone special in it (CastPanes.jsx): taller than Pixie,
+           drawn at whole multiples of their pixels */
+        /* cast-portrait, not cast: that's the desktop layer (.cast) */
+        .portrait.cast-portrait {
+            &.large {
+                width: 120px;
+                height: 150px;
+            }
+
+            &.small {
+                width: 48px;
+                height: 60px;
+            }
+        }
+
+        .meter {
+            .coffee {
+                background: linear-gradient(90deg, #8b5a2b, #d4a373);
+            }
+
+            .paint {
+                background: linear-gradient(90deg, #f472b6, #4cc9f0);
+            }
+        }
+
+        .cast-stats {
+            @apply mt-4 grid grid-cols-3 gap-2;
+
+            > div {
+                @apply flex flex-col items-center gap-0.5 p-3 rounded-lg border border-gray-200 bg-gray-50 text-center;
+            }
+
+            span {
+                @apply text-xl leading-none;
+            }
+
+            b {
+                @apply mt-1 text-lg tabular-nums;
+            }
+
+            small {
+                @apply text-xs text-gray-500;
+            }
+        }
+
+        .cast-gallery {
+            @apply mt-3 flex flex-wrap gap-2;
+        }
+
+        .cast-painting {
+            width: 56px;
+            height: 48px;
+            image-rendering: pixelated;
+            border: 3px solid #8a5a3c;
+            border-radius: 2px;
+            box-shadow: 0 1px 3px rgb(0 0 0 / 0.25);
+        }
+
+        .cast-subhead {
+            @apply mt-6 text-sm font-semibold;
+        }
     }
 
     #home {
@@ -1262,6 +1436,526 @@ section.window-maximized {
 .window-pouring * {
     visibility: hidden !important;
     transition: none !important;
+}
+
+/* Gourav's book (windows/Book.jsx): a pixel-art book on a wooden desk. Its
+   leaves turn in steps, like frames of an old game; the cover sits in the
+   middle while the book is shut. */
+/* Music (Music.jsx): what's on and the controls on the left, the songs on
+   the right, like the Mac's Music app */
+#music {
+    @apply absolute top-20 left-[max(1rem,calc(50%-22rem))] w-[44rem] max-w-[calc(100vw-2rem)] bg-white shadow-2xl drop-shadow-2xl rounded-xl overflow-hidden;
+
+    #window-header h2 {
+        @apply font-bold text-sm text-center flex-1;
+    }
+}
+
+.music-body {
+    @apply flex max-sm:flex-col;
+}
+
+.music-now {
+    @apply flex flex-col items-center gap-3 w-64 flex-none p-5 border-r border-gray-200 bg-gray-50 max-sm:w-full max-sm:border-r-0 max-sm:border-b;
+}
+
+.music-cover {
+    display: grid;
+    place-items: center;
+    flex: none;
+    background: linear-gradient(160deg, var(--from), var(--to));
+    border-radius: 10px;
+
+    & canvas {
+        image-rendering: pixelated;
+    }
+
+    &.large {
+        width: 168px;
+        height: 168px;
+        box-shadow: 0 10px 24px rgb(0 0 0 / 0.25);
+
+        & canvas {
+            width: 144px;
+            height: 144px;
+        }
+    }
+
+    &.small {
+        width: 36px;
+        height: 36px;
+        border-radius: 6px;
+
+        & canvas {
+            width: 24px;
+            height: 24px;
+        }
+    }
+}
+
+.music-visualizer {
+    width: 168px;
+    height: 30px;
+    image-rendering: pixelated;
+}
+
+.music-title {
+    @apply w-full text-center;
+
+    h3 {
+        @apply font-semibold text-base truncate;
+    }
+
+    p {
+        @apply text-sm text-gray-500 truncate;
+    }
+}
+
+/* the song's progress, and the volume: thin bars filled up to the thumb */
+.music-progress,
+.music-volume {
+    input[type="range"] {
+        @apply w-full h-1 rounded-full cursor-pointer appearance-none;
+        background: linear-gradient(to right, #e11d48 var(--fill), var(--color-gray-300) var(--fill));
+
+        &::-webkit-slider-thumb {
+            @apply appearance-none w-3 h-3 rounded-full bg-white border border-gray-300 shadow;
+        }
+
+        &::-moz-range-thumb {
+            @apply w-3 h-3 rounded-full bg-white border border-gray-300 shadow;
+        }
+    }
+}
+
+.music-progress {
+    @apply w-full;
+
+    div {
+        @apply flex justify-between mt-1 text-[11px] text-gray-500 tabular-nums;
+    }
+}
+
+.music-controls {
+    @apply flex items-center gap-2;
+
+    button {
+        @apply grid place-items-center w-9 h-9 rounded-full text-gray-700 cursor-pointer hover:bg-gray-200;
+
+        &.small {
+            @apply w-8 h-8 text-gray-400;
+
+            &.on {
+                @apply text-rose-600;
+            }
+        }
+
+        &.play {
+            @apply w-12 h-12 text-white bg-rose-600 hover:bg-rose-700;
+        }
+    }
+}
+
+.music-volume {
+    @apply flex items-center gap-2 w-full text-gray-500;
+}
+
+.music-library {
+    @apply flex-1 min-w-0 p-5;
+
+    > h3 {
+        @apply font-bold text-lg;
+    }
+
+    > p {
+        @apply text-xs text-gray-500;
+    }
+}
+
+.music-list {
+    @apply mt-3 space-y-1 max-h-[22rem] overflow-y-auto;
+
+    button {
+        @apply flex items-center gap-3 w-full px-2 py-1.5 rounded-lg text-left cursor-pointer hover:bg-gray-100;
+
+        &.current {
+            @apply bg-rose-50;
+
+            b {
+                @apply text-rose-600;
+            }
+        }
+    }
+
+    .number {
+        @apply grid place-items-center w-5 text-xs text-gray-400 tabular-nums;
+    }
+
+    .name {
+        @apply flex flex-col flex-1 min-w-0;
+
+        b {
+            @apply text-sm font-medium truncate;
+        }
+
+        small {
+            @apply text-xs text-gray-500 truncate;
+        }
+    }
+
+    .length {
+        @apply text-xs text-gray-400 tabular-nums;
+    }
+}
+
+/* three little bars bouncing next to the song that's on */
+.music-playing {
+    @apply flex items-end gap-px h-3;
+
+    i {
+        @apply block w-[3px] bg-rose-600;
+        animation: music-bounce 0.7s steps(4) infinite;
+
+        &:nth-child(2) {
+            animation-delay: -0.25s;
+        }
+
+        &:nth-child(3) {
+            animation-delay: -0.5s;
+        }
+    }
+}
+
+@keyframes music-bounce {
+    0%,
+    100% {
+        height: 3px;
+    }
+    50% {
+        height: 12px;
+    }
+}
+
+/* in the menu bar while there's music (NowPlaying.jsx) */
+nav .now-playing {
+    @apply gap-1 max-sm:hidden;
+
+    button {
+        @apply cursor-pointer;
+    }
+
+    .toggle {
+        @apply grid place-items-center w-5 h-5 rounded-full text-black hover:bg-black/10;
+    }
+
+    /* a narrow screen has no room for the song's name in the menu bar */
+    .song {
+        @apply max-w-40 truncate text-sm font-medium text-black hover:underline max-lg:hidden;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .music-playing i {
+        animation: none;
+        height: 8px;
+    }
+}
+
+#book {
+    @apply absolute top-16 left-[max(1rem,calc(50%-23rem))] w-[46rem] max-w-[calc(100vw-2rem)] shadow-2xl drop-shadow-2xl rounded-xl overflow-hidden;
+
+    #window-header h2 {
+        @apply font-bold text-sm text-center flex-1;
+    }
+}
+
+.book-desk {
+    padding: 24px 24px 14px;
+    background: repeating-linear-gradient(0deg, #3a2618 0 6px, #33210f 6px 8px);
+    outline: none;
+}
+
+.book-holder {
+    position: relative;
+}
+
+.book {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 640px;
+    height: 420px;
+    margin-left: -320px;
+    transform-origin: top center;
+    font-family: var(--font-pixel);
+    color: #3b2a1a;
+}
+
+.book-shift {
+    position: absolute;
+    inset: 0;
+    perspective: 2000px;
+    transition: translate 0.6s steps(6);
+
+    .book.closed & {
+        translate: -25% 0;
+    }
+
+    .book.finished & {
+        translate: 25% 0;
+    }
+}
+
+/* pixel corners: a notch cut out of each corner */
+.book-page,
+.book-chip,
+.book-button,
+.book-controls button {
+    --notch: 4px;
+    clip-path: polygon(
+        0 var(--notch), var(--notch) var(--notch), var(--notch) 0,
+        calc(100% - var(--notch)) 0, calc(100% - var(--notch)) var(--notch), 100% var(--notch),
+        100% calc(100% - var(--notch)), calc(100% - var(--notch)) calc(100% - var(--notch)), calc(100% - var(--notch)) 100%,
+        var(--notch) 100%, var(--notch) calc(100% - var(--notch)), 0 calc(100% - var(--notch))
+    );
+}
+
+.leaf {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 50%;
+    height: 100%;
+    transform-origin: left center;
+    transform-style: preserve-3d;
+    /* it turns in six steps; halfway over, it moves to the top of the left pile */
+    transition:
+        transform 0.6s steps(6),
+        z-index 0s 0.3s;
+    cursor: pointer;
+
+    &.turned {
+        transform: rotateY(-180deg);
+    }
+}
+
+/* book-page, not page: the Browser's pages are .page */
+.book-page {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    backface-visibility: hidden;
+    background-color: #f6e7c1;
+    box-shadow: inset 0 0 0 4px #e8d5a6;
+
+    /* shadow by the spine */
+    &.front {
+        background-image: linear-gradient(to right, rgb(59 42 26 / 0.16), transparent 10%);
+    }
+
+    &.back {
+        transform: rotateY(180deg);
+        background-image: linear-gradient(to left, rgb(59 42 26 / 0.16), transparent 10%);
+    }
+
+    &.cover {
+        color: #ffd166;
+        background: #7b3f2a;
+        box-shadow:
+            inset 0 0 0 6px #5a2c1c,
+            inset 0 0 0 10px #ffd166,
+            inset 0 0 0 14px #5a2c1c;
+
+        h2 {
+            text-shadow: 3px 3px 0 #3d1d12;
+        }
+    }
+
+    h2 {
+        margin: 0;
+        font: 700 30px/1.1 var(--font-pixel);
+    }
+
+    h3 {
+        margin: 0;
+        font: 700 22px/1.15 var(--font-pixel);
+    }
+
+    p {
+        margin: 0;
+        font: 400 15px/1.4 var(--font-pixel);
+    }
+
+    .small {
+        font-size: 13px;
+        color: #7a6248;
+    }
+
+    a {
+        color: #a8302a;
+        text-decoration: underline;
+        text-underline-offset: 3px;
+    }
+}
+
+.page-inner {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    padding: 28px 30px 34px;
+    text-align: center;
+}
+
+/* a page with a lot on it (the toolbox) packs closer */
+.page-inner.dense {
+    gap: 5px;
+    padding-top: 20px;
+
+    .book-skills {
+        gap: 1px;
+    }
+
+    .book-chip {
+        font-size: 11px;
+        padding: 0 5px;
+    }
+
+    .small {
+        font-size: 12px;
+    }
+}
+
+.pixel-art {
+    image-rendering: pixelated;
+    flex-shrink: 0;
+}
+
+.page-number {
+    position: absolute;
+    bottom: 12px;
+    font: 400 12px var(--font-pixel);
+    color: #a08a66;
+
+    .front & {
+        right: 20px;
+    }
+
+    .back & {
+        left: 20px;
+    }
+}
+
+.book-kicker {
+    font: 600 11px var(--font-pixel);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #a8302a;
+}
+
+.book-author {
+    color: #f6e7c1;
+}
+
+.book-hint {
+    color: #ffd166;
+    animation: book-blink 1.2s steps(2) infinite;
+}
+
+@keyframes book-blink {
+    50% {
+        opacity: 0.4;
+    }
+}
+
+.book-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font: 400 13px/1.45 var(--font-pixel);
+
+    li::before {
+        content: "▸ ";
+        color: #a8302a;
+    }
+}
+
+.book-skills {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+}
+
+.book-chips {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px;
+}
+
+.book-chip {
+    --notch: 2px;
+    padding: 1px 7px;
+    font: 400 12px/1.5 var(--font-pixel);
+    color: #f6e7c1;
+    background: #3b2a1a;
+}
+
+.book-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.book-button {
+    --notch: 3px;
+    padding: 5px 12px;
+    font: 600 13px var(--font-pixel);
+    color: #ffd166;
+    background: #3b2a1a;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        background: #5a3c22;
+    }
+}
+
+.book-controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+    font: 400 14px var(--font-pixel);
+    color: #e9d9b6;
+
+    button {
+        --notch: 3px;
+        padding: 5px 14px;
+        font: 600 14px var(--font-pixel);
+        color: #ffd166;
+        background: rgb(255 209 102 / 0.12);
+        cursor: pointer;
+
+        &:hover:not(:disabled) {
+            background: rgb(255 209 102 / 0.25);
+        }
+
+        &:disabled {
+            opacity: 0.35;
+            cursor: default;
+        }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .leaf,
+    .book-shift {
+        transition: none;
+    }
 }
 
 /* Spotlight search (Spotlight.jsx): a search box floating over the desktop,
@@ -2289,6 +2983,44 @@ section.window-maximized {
     will-change: transform;
 }
 
+/* the light around her magic lamp at night: rings that step down, like
+   pixel light, behind her things */
+.pixie-glow {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 200px;
+    height: 200px;
+    margin: -100px 0 0 -100px;
+    border-radius: 50%;
+    background: radial-gradient(
+        circle,
+        rgb(255 236 170 / 0.42) 0 14%,
+        rgb(255 214 120 / 0.24) 14% 28%,
+        rgb(255 196 90 / 0.12) 28% 44%,
+        rgb(255 186 80 / 0.05) 44% 60%,
+        transparent 60%
+    );
+    mix-blend-mode: screen;
+    opacity: 0;
+    pointer-events: none;
+    will-change: transform, opacity;
+}
+
+/* Chompy, her plant beast (beast.js): the fly buzzing round his head */
+.pixie-flies {
+    position: absolute;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    image-rendering: pixelated;
+    will-change: transform;
+}
+
+.pixie-fx.sparkle {
+    color: #ffd166;
+}
+
 /* a star from her slingshot, in flight */
 .pixie-shot {
     position: absolute;
@@ -2329,10 +3061,423 @@ section.window-maximized {
     }
 }
 
+/* Gourav or someone special, when picked as the visitor's companion
+   (Companions.jsx), where Pixie would be. Their bubbles are hers, with a
+   name tag. */
+.cast {
+    position: fixed;
+    inset: 0;
+    z-index: 99989;
+    pointer-events: none;
+
+    &.hidden {
+        display: none;
+    }
+}
+
+.cast-person {
+    position: absolute;
+    top: 0;
+    left: 0;
+    will-change: transform;
+}
+
+/* their things (castThings.js): his desk and robot, her easel and parakeet,
+   behind them on the floor */
+.cast-things {
+    position: absolute;
+    inset: 0;
+
+    &.hidden {
+        display: none;
+    }
+}
+
+/* a little pile of dust for his robot to sweep up */
+.cast-dust {
+    position: absolute;
+    top: 0;
+    left: 0;
+    image-rendering: pixelated;
+    pointer-events: none;
+    transition: opacity 0.2s steps(3);
+}
+
+.cast-thing {
+    position: absolute;
+    top: 0;
+    left: 0;
+    will-change: transform;
+
+    & canvas {
+        display: block;
+        pointer-events: auto;
+        cursor: pointer;
+        image-rendering: pixelated;
+        outline: none;
+
+        &:focus-visible {
+            filter: drop-shadow(0 0 4px #fff);
+        }
+    }
+}
+
+.cast-sprite {
+    display: block;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
+    cursor: grab;
+    touch-action: none;
+    image-rendering: pixelated;
+    outline: none;
+
+    &:active {
+        cursor: grabbing;
+    }
+
+    &:focus-visible {
+        filter: drop-shadow(0 0 4px #fff);
+    }
+}
+
+.cast-bubble {
+    bottom: calc(100% + 4px);
+
+    /* over the top of his monitor while he sits at his desk */
+    .seated & {
+        bottom: calc(100% + 26px);
+    }
+}
+
+/* Neel, her parakeet (castThings.js): above the rest of her things, and
+   what he squawks, in a tiny bubble over him */
+.cast-bird {
+    z-index: 1;
+}
+
+.bird-say {
+    position: absolute;
+    bottom: calc(100% - 6px);
+    left: 50%;
+    translate: -50% 0;
+    padding: 2px 7px;
+    white-space: nowrap;
+    font: 700 11px/1.4 var(--font-roboto);
+    color: #2b1b2e;
+    background: #ffffff;
+    border: 2px solid #2b1b2e;
+    border-radius: 5px;
+    box-shadow: 2px 2px 0 rgb(43 27 46 / 0.25);
+    opacity: 0;
+    scale: 0.6;
+    pointer-events: none;
+    transition:
+        opacity 0.15s steps(3),
+        scale 0.15s steps(3);
+
+    &.shown {
+        opacity: 1;
+        scale: 1;
+    }
+}
+
+/* a little pixel picture in a thought bubble (ThoughtPicture.jsx), when they
+   think of each other */
+.thought-picture {
+    display: block;
+    margin: 4px auto 6px;
+    padding: 4px;
+    background: #ffffff;
+    border: 2px dashed #e3d6f0;
+    border-radius: 10px;
+    box-sizing: content-box;
+    image-rendering: pixelated;
+
+    /* in the list in their app */
+    &.small {
+        flex: none;
+        margin: 0;
+        padding: 2px;
+        border-width: 1px;
+        border-radius: 6px;
+    }
+}
+
+.cast-name {
+    display: block;
+    margin-bottom: 2px;
+    font: 400 11px/1.2 var(--font-pixel);
+    letter-spacing: 0.04em;
+
+    .gourav & {
+        color: #2552a8;
+    }
+
+    .her & {
+        color: #b8233a;
+    }
+}
+
+/* Choosing a companion (CompanionPicker.jsx): the three, side by side, on
+   the first visit, over a dimmed desktop */
+.companion-picker {
+    position: fixed;
+    inset: 0;
+    z-index: 150500;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgb(16 10 24 / 0.55);
+    backdrop-filter: blur(6px);
+    animation: companion-in 0.35s ease both;
+    transition: opacity 0.5s ease 0.15s;
+
+    &.leaving {
+        opacity: 0;
+        pointer-events: none;
+    }
+}
+
+@keyframes companion-in {
+    from {
+        opacity: 0;
+    }
+}
+
+.companion-panel {
+    width: min(860px, 100%);
+    max-height: 100%;
+    overflow-y: auto;
+    padding: 28px 28px 20px;
+    text-align: center;
+    color: #2b1b2e;
+    background: #f6e7c1;
+    border: 4px solid #2b1b2e;
+    border-radius: 8px;
+    box-shadow: 8px 8px 0 rgb(0 0 0 / 0.35);
+
+    & h2 {
+        margin: 0;
+        font: 700 32px/1.1 var(--font-pixel);
+    }
+}
+
+.companion-intro {
+    margin: 8px auto 22px;
+    max-width: 52ch;
+    font: 500 14px/1.5 var(--font-roboto);
+    color: #5b4a63;
+}
+
+.companion-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.companion-card {
+    --accent: #ff6fa6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 14px 14px 16px;
+    color: inherit;
+    background: #fffaf0;
+    border: 3px solid #2b1b2e;
+    border-radius: 6px;
+    box-shadow: 4px 4px 0 rgb(43 27 46 / 0.25);
+    cursor: pointer;
+    outline: none;
+    transition:
+        translate 0.15s steps(3),
+        box-shadow 0.15s steps(3),
+        opacity 0.3s ease;
+
+    /* who-pixie, not pixie: that's Pixie herself (.pixie) */
+    &.who-gourav {
+        --accent: #2f6fe0;
+    }
+
+    &.who-her {
+        --accent: #d62839;
+    }
+
+    &:hover,
+    &:focus-visible,
+    &.chosen {
+        translate: 0 -4px;
+        border-color: var(--accent);
+        box-shadow: 4px 8px 0 color-mix(in srgb, var(--accent) 45%, transparent);
+    }
+
+    &.chosen .companion-sprite {
+        animation: companion-cheer 0.4s steps(4) 2;
+    }
+
+    &.faded {
+        opacity: 0.35;
+    }
+}
+
+/* where they stand: a little floor, so short Pixie and tall Gourav line up */
+.companion-stage {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    height: 162px;
+
+    &::after {
+        content: "";
+        position: absolute;
+        bottom: -4px;
+        left: 50%;
+        width: 84px;
+        height: 10px;
+        translate: -50% 0;
+        background: rgb(43 27 46 / 0.15);
+        border-radius: 50%;
+    }
+}
+
+.companion-sprite {
+    position: relative;
+    z-index: 1;
+    image-rendering: pixelated;
+    animation: companion-bob 1.6s steps(2) infinite;
+}
+
+.companion-card:nth-child(2) .companion-sprite {
+    animation-delay: -0.5s;
+}
+
+.companion-card:nth-child(3) .companion-sprite {
+    animation-delay: -1s;
+}
+
+@keyframes companion-bob {
+    50% {
+        translate: 0 -3px;
+    }
+}
+
+@keyframes companion-cheer {
+    50% {
+        translate: 0 -14px;
+    }
+}
+
+.companion-name {
+    margin-top: 6px;
+    font: 700 20px/1.2 var(--font-pixel);
+    color: var(--accent);
+}
+
+.companion-about {
+    font: 500 12.5px/1.45 var(--font-roboto);
+    color: #5b4a63;
+}
+
+.companion-skip {
+    margin-top: 18px;
+    padding: 4px 10px;
+    font: 500 12px var(--font-roboto);
+    color: #7a6880;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    border-radius: 4px;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        color: #2b1b2e;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .companion-sprite,
+    .companion-card.chosen .companion-sprite {
+        animation: none;
+    }
+}
+
+/* Pixie's story (PortalStory.jsx): a little pixel-art film over the whole
+   screen, then the portal on the desktop that she jumps out of */
+.pixie-story {
+    position: fixed;
+    inset: 0;
+    z-index: 160000;
+    display: grid;
+    place-items: center;
+    background: #000;
+    transition: opacity 0.6s ease;
+
+    &.fading {
+        opacity: 0;
+        pointer-events: none;
+    }
+}
+
+.pixie-story-stage {
+    width: min(100vw, calc(100vh * 16 / 9));
+    aspect-ratio: 16 / 9;
+    image-rendering: pixelated;
+}
+
+.pixie-story-caption {
+    position: absolute;
+    left: 50%;
+    bottom: max(5vh, 24px);
+    translate: -50% 0;
+    max-width: min(90vw, 760px);
+    margin: 0;
+    padding: 8px 16px;
+    text-align: center;
+    font: 600 clamp(15px, 2.1vw, 24px) / 1.5 var(--font-roboto);
+    color: #fff;
+    text-shadow: 2px 2px 0 #000;
+    background: rgb(0 0 0 / 0.45);
+    border-radius: 6px;
+
+    &:empty {
+        visibility: hidden;
+    }
+}
+
+.pixie-story-skip {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    padding: 6px 14px;
+    font: 600 13px var(--font-roboto);
+    color: #fff;
+    background: rgb(255 255 255 / 0.12);
+    border: 2px solid rgb(255 255 255 / 0.55);
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+        background: rgb(255 255 255 / 0.25);
+    }
+}
+
+.pixie-portal {
+    position: fixed;
+    z-index: 99988; /* just behind Pixie and her things */
+    width: 144px;
+    height: 240px;
+    image-rendering: pixelated;
+    pointer-events: none;
+}
+
 /* phones have the home screen instead of the desktop */
 @media (max-width: 639px) {
     .pixie,
-    .pixie-things {
+    .pixie-things,
+    .cast {
         display: none;
     }
 }

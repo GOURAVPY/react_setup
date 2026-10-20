@@ -9,6 +9,10 @@
 //
 // The strips run across the direction the window travels: rows when the
 // dock is at the bottom, columns when it is on the left or right.
+//
+// Anything in the window marked data-genie-skip is left out of the copies:
+// parts that can't be seen anyway, like the pages of Gourav's book stacked
+// under the open ones. Copying those into every strip made that window stutter.
 
 const STRIP_SIZE = 22; // px; fewer strips are cheaper, more are smoother
 const MAX_STRIPS = 32;
@@ -18,10 +22,13 @@ const SLIDE_START = 0.2; // when the window starts sliding towards the dock
 const clamp = (value) => Math.min(1, Math.max(0, value));
 const easeInOut = (t) => (1 - Math.cos(Math.PI * t)) / 2;
 
+// a copy's canvases are blank: each gets the picture of the canvas it was
+// copied from (numbered, as some are left out of the copies)
 const copyCanvases = (from, to) => {
   const sources = from.querySelectorAll("canvas");
-  to.querySelectorAll("canvas").forEach((canvas, i) => {
-    canvas.getContext("2d")?.drawImage(sources[i], 0, 0);
+  to.querySelectorAll("canvas").forEach((canvas) => {
+    const source = sources[Number(canvas.dataset.genieCanvas)];
+    if (source?.width && source.height) canvas.getContext("2d")?.drawImage(source, 0, 0);
   });
 };
 
@@ -98,8 +105,13 @@ const createGenie = (el, target, side = "bottom") => {
   document.body.appendChild(layer);
 
   // One copy of the window, taken now while it is still shown, that each
-  // strip is cloned from later. The window's own rounded corners are kept.
+  // strip is cloned from later. The window's own rounded corners are kept;
+  // the parts nobody can see are left out.
+  el.querySelectorAll("canvas").forEach((canvas, i) => {
+    canvas.dataset.genieCanvas = i;
+  });
   const template = el.cloneNode(true);
+  template.querySelectorAll("[data-genie-skip]").forEach((part) => part.remove());
   Object.assign(template.style, {
     position: "absolute",
     top: "0",

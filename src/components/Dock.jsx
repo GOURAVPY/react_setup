@@ -7,11 +7,20 @@ import clsx from "clsx";
 import useWindowStore from "../store/window";
 import useLaunchApp from "../store/launch";
 import useDockStore from "../store/dock";
+import usePixieStore from "../store/pixie";
+import { HER_NAME } from "./pixie/castLines";
 import AppIcon from "./AppIcon";
 
 const MAGNIFY = 0.25; // how much bigger the icon under the pointer grows
 const LIFT = 15; // px the icon under the pointer rises out of the dock
 const HIDE_DELAY = 400; // ms before an auto-hiding dock slides away
+
+// Pixie's app in the dock shows the visitor's companion: her, Gourav or
+// someone special, whoever they picked (CompanionPicker.jsx)
+const COMPANION_APPS = {
+  gourav: { name: "Gourav", icon: "gourav.svg" },
+  her: { name: HER_NAME, icon: "her.svg" },
+};
 
 const Dock = () => {
   const windows = useWindowStore((state) => state.windows);
@@ -26,6 +35,8 @@ const Dock = () => {
   );
   const autohide = autohideSetting || fullScreen;
   const indicators = useDockStore((state) => state.indicators);
+  const companion = usePixieStore((state) => state.companion);
+  const apps = dockApps.map((app) => (app.id === "pixie" ? { ...app, ...COMPANION_APPS[companion] } : app));
   const Dockref = useRef(null);
   const hideTimer = useRef(null);
   const [revealed, setRevealed] = useState(false);
@@ -130,7 +141,7 @@ const Dock = () => {
         onMouseLeave={autohide ? hideSoon : undefined}
       >
         <div ref={Dockref} className="dock-container">
-          {dockApps.map(({ id, name, icon, canOpen }) => (
+          {apps.map(({ id, name, icon, canOpen }) => (
             <div key={id} className="dock-item">
               <button
                 type="button"

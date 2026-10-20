@@ -39,10 +39,11 @@ const APPS = {
   pixie: "pixie",
   game: "arcade",
   pacman: "arcade",
+  book: "book",
 };
 
 const APP_NAMES =
-  "portfolio, browser, gallery, contact, resume, arcade, pixie, settings";
+  "portfolio, browser, gallery, contact, resume, book, arcade, pixie, settings";
 
 const THEMES = ["light", "dark", "system"];
 

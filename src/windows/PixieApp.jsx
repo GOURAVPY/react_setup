@@ -1,16 +1,31 @@
 import { useEffect, useRef, useState } from "react";
-import { BookHeart, MessageCircle, Settings2, Smile, Sparkles } from "lucide-react";
+import {
+  BookHeart,
+  BookOpen,
+  CalendarDays,
+  Clapperboard,
+  MessageCircle,
+  Settings2,
+  Smile,
+  Sparkles,
+} from "lucide-react";
 import clsx from "clsx";
 import dayjs from "dayjs";
 import { Windowcontrols } from "../components";
 import WindowWrapper from "../hoc/Windowwappre";
 import Toggle from "../components/Toggle";
-import usePixieStore, { callPixie, chatWithPixie } from "../store/pixie";
+import usePixieStore, { callPixie, chatWithPixie, pickCompanion, watchPixieStory } from "../store/pixie";
+import useWindowStore from "../store/window";
 import { brainEnabled } from "../components/pixie/brain";
 import { HEIGHT, SCALE, WIDTH, drawFrame } from "../components/pixie/sprites";
+import { CAST_NAMES, CAST_ROLES } from "../components/pixie/castLines";
+import { CastNowPane, CastPortrait, CastTodayPane } from "./CastPanes";
 
 // Pixie's own app in the dock: how she is right now, a diary of what her AI
-// mind decided, and her settings.
+// mind decided, and her settings. When the visitor's companion is Gourav or
+// someone special, it's theirs instead (CastPanes.jsx).
+
+const COMPANION_NAMES = { pixie: "Pixie", ...CAST_NAMES };
 
 const MOODS = {
   happy: ["😊", "Happy"],
@@ -170,6 +185,14 @@ const NowPane = () => {
           <Smile size={14} />
           Call Pixie
         </button>
+        <button type="button" className="restart" onClick={watchPixieStory}>
+          <Clapperboard size={14} />
+          Watch her story
+        </button>
+        <button type="button" className="restart" onClick={() => useWindowStore.getState().openWindow("book")}>
+          <BookOpen size={14} />
+          Read Gourav's book
+        </button>
       </div>
 
       <p className="phone-note">Pixie lives on the desktop. Open this site on a computer to meet her.</p>
@@ -216,23 +239,33 @@ const DiaryPane = () => {
 };
 
 const OptionsPane = () => {
-  const { show, chatty, mind, things, setPixie } = usePixieStore();
+  const { show, chatty, mind, things, companion, setPixie } = usePixieStore();
 
   return (
     <div className="pane">
       <h3>Options</h3>
-      <p>How Pixie behaves on the desktop.</p>
+      <p>Your companion on the desktop, and how they behave.</p>
 
       <div className="setting-group">
+        <div className={clsx("setting-row", !show && "disabled")}>
+          <span>
+            Your companion: {COMPANION_NAMES[companion] ?? "not picked yet"}
+            <small>Who shows you around: Pixie, Gourav or someone special. Only they are on the desktop.</small>
+          </span>
+          <button type="button" className="restart" disabled={!show} onClick={() => pickCompanion("")}>
+            Choose again
+          </button>
+        </div>
+
         <div className="setting-row">
-          <span>Show Pixie</span>
-          <Toggle label="Show Pixie" checked={show} onChange={(value) => setPixie("show", value)} />
+          <span>Show your companion</span>
+          <Toggle label="Show your companion" checked={show} onChange={(value) => setPixie("show", value)} />
         </div>
 
         <div className={clsx("setting-row", !show && "disabled")}>
           <span>
             Shares tips and thoughts
-            <small>Speech and thought bubbles she makes on her own.</small>
+            <small>Bubbles they make on their own.</small>
           </span>
           <Toggle
             label="Shares tips and thoughts"
@@ -243,11 +276,11 @@ const OptionsPane = () => {
 
         <div className={clsx("setting-row", !show && "disabled")}>
           <span>
-            Her things on the desktop
-            <small>Her bed, plant and ball, and her slingshot stars.</small>
+            Their things on the desktop
+            <small>Pixie's bed, ball and plant; Gourav's desk, bookshelf, coffee machine and robot; her easel and parakeet.</small>
           </span>
           <Toggle
-            label="Her things on the desktop"
+            label="Their things on the desktop"
             checked={things}
             onChange={(value) => setPixie("things", value)}
           />
@@ -255,7 +288,7 @@ const OptionsPane = () => {
 
         <div className={clsx("setting-row", (!show || !brainEnabled) && "disabled")}>
           <span>
-            Decides for herself (AI)
+            Pixie decides for herself (AI)
             <small>
               {brainEnabled
                 ? "Her AI mind picks where she goes and what she does."
@@ -274,35 +307,46 @@ const OptionsPane = () => {
   );
 };
 
-const SECTIONS = [
+const PIXIE_SECTIONS = [
   { id: "now", label: "Now", icon: Sparkles, pane: NowPane },
   { id: "diary", label: "Diary", icon: BookHeart, pane: DiaryPane },
   { id: "options", label: "Options", icon: Settings2, pane: OptionsPane },
 ];
 
+const CAST_SECTIONS = [
+  { id: "now", label: "Now", icon: Sparkles, pane: CastNowPane },
+  { id: "today", label: "Today", icon: CalendarDays, pane: CastTodayPane },
+  { id: "options", label: "Options", icon: Settings2, pane: OptionsPane },
+];
+
 const PixieApp = () => {
-  const [active, setActive] = useState(SECTIONS[0].id);
-  const ActivePane = SECTIONS.find(({ id }) => id === active).pane;
+  const companion = usePixieStore((state) => state.companion);
+  const cast = companion === "gourav" || companion === "her" ? companion : null;
+  const sections = cast ? CAST_SECTIONS : PIXIE_SECTIONS;
+  const [active, setActive] = useState(sections[0].id);
+  // a section the other companion doesn't have: back to the first
+  const ActivePane = (sections.find(({ id }) => id === active) ?? sections[0]).pane;
+  const name = cast ? CAST_NAMES[cast] : "Pixie";
 
   return (
     <>
       <div id="window-header">
         <Windowcontrols target="pixie" />
-        <h2>Pixie</h2>
+        <h2>{name}</h2>
       </div>
 
       <div className="flex">
         <div className="sidebar">
           <div className="profile">
-            <Portrait size="small" />
+            {cast ? <CastPortrait who={cast} size="small" /> : <Portrait size="small" />}
             <div>
-              <p>Pixie</p>
-              <small>Your little guide</small>
+              <p>{name}</p>
+              <small>{cast ? CAST_ROLES[cast] : "Your little guide"}</small>
             </div>
           </div>
 
           <ul>
-            {SECTIONS.map(({ id, label, icon }) => {
+            {sections.map(({ id, label, icon }) => {
               const Icon = icon;
               return (
                 <li
@@ -318,7 +362,7 @@ const PixieApp = () => {
           </ul>
         </div>
 
-        <ActivePane />
+        <ActivePane who={cast} />
       </div>
     </>
   );

@@ -138,10 +138,34 @@ const SOUNDS = {
     tone({ freq: 2200, duration: 0.025, volume: 0.04, type: "triangle" });
   },
   pop: () => tone({ freq: 520, to: 1250, duration: 0.11, volume: 0.16 }),
+  // Pixie's story: the portal opening, a soft magic shimmer…
+  portal: () =>
+    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((freq, i) =>
+      tone({ freq, type: "triangle", start: i * 0.08, duration: 0.6, volume: 0.06 }),
+    ),
+  // …and the rush through it
+  warp: () => whoosh({ from: 200, to: 3200, duration: 1.6, volume: 0.16 }),
+  // a page of Gourav's book turning: a quick papery flick
+  page: () => whoosh({ from: 2600, to: 1100, duration: 0.18, volume: 0.07 }),
+  // a bug getting what it deserves: a soft thump and a swish
+  hit: () => {
+    tone({ freq: 220, to: 70, duration: 0.14, volume: 0.2, type: "triangle" });
+    whoosh({ from: 900, to: 300, duration: 0.12, volume: 0.1 });
+  },
   // Pixie starting to talk: a tiny two-note chirp
   chirp: () => {
     tone({ freq: 1500, to: 1900, duration: 0.07, volume: 0.06 });
     tone({ freq: 1900, to: 2300, start: 0.07, duration: 0.08, volume: 0.06 });
+  },
+  // Gourav's cleaning robot: beep boop
+  beep: () => {
+    tone({ freq: 880, duration: 0.07, volume: 0.07, type: "square" });
+    tone({ freq: 660, start: 0.1, duration: 0.09, volume: 0.07, type: "square" });
+  },
+  // Neel, her parakeet: a quick, bright squawk
+  squawk: () => {
+    tone({ freq: 1250, to: 1900, duration: 0.06, volume: 0.08, type: "sawtooth" });
+    tone({ freq: 1700, to: 1100, start: 0.07, duration: 0.09, volume: 0.07, type: "sawtooth" });
   },
   // a low, dull alert for things that went wrong
   error: () => {

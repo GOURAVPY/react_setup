@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Gourav's Book, for the dock: the pixel-art book from Pixie's story -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fde68a"/>
+      <stop offset="1" stop-color="#f59e0b"/>
+    </linearGradient>
+  </defs>
+  <rect x="6" y="6" width="88" height="88" rx="21" fill="url(#bg)"/>
+  <rect x="6" y="6" width="88" height="88" rx="21" fill="none" stroke="#ffffff" stroke-opacity=".4" stroke-width="1"/>
+  <g shape-rendering="crispEdges">
+    <!-- shadow -->
+    <rect x="28" y="82" width="50" height="4" fill="#7c2d12" opacity=".25"/>
+    <!-- the pages, peeking out on the right -->
+    <rect x="28" y="19" width="50" height="64" fill="#2b1b2e"/>
+    <rect x="30" y="21" width="46" height="60" fill="#f6e7c1"/>
+    <rect x="70" y="25" width="6" height="2" fill="#e3cf9e"/>
+    <rect x="70" y="33" width="6" height="2" fill="#e3cf9e"/>
+    <rect x="70" y="41" width="6" height="2" fill="#e3cf9e"/>
+    <rect x="70" y="49" width="6" height="2" fill="#e3cf9e"/>
+    <rect x="70" y="57" width="6" height="2" fill="#e3cf9e"/>
+    <rect x="70" y="65" width="6" height="2" fill="#e3cf9e"/>
+    <rect x="70" y="73" width="6" height="2" fill="#e3cf9e"/>
+    <!-- the leather cover, its spine and gold border -->
+    <rect x="21" y="15" width="51" height="68" fill="#2b1b2e"/>
+    <rect x="23" y="17" width="47" height="64" fill="#7b3f2a"/>
+    <rect x="23" y="17" width="6" height="64" fill="#5a2c1c"/>
+    <rect x="31" y="21" width="35" height="56" fill="none" stroke="#ffd166" stroke-width="3"/>
+    <!-- the badge: < / > -->
+    <g fill="#ffd166">
+      <rect x="41" y="37" width="3" height="3"/>
+      <rect x="38" y="40" width="3" height="3"/>
+      <rect x="35" y="43" width="3" height="3"/>
+      <rect x="38" y="46" width="3" height="3"/>
+      <rect x="41" y="49" width="3" height="3"/>
+      <rect x="51" y="37" width="3" height="3"/>
+      <rect x="50" y="40" width="3" height="3"/>
+      <rect x="48" y="43" width="3" height="3"/>
+      <rect x="47" y="46" width="3" height="3"/>
+      <rect x="45" y="49" width="3" height="3"/>
+      <rect x="55" y="37" width="3" height="3"/>
+      <rect x="58" y="40" width="3" height="3"/>
+      <rect x="61" y="43" width="3" height="3"/>
+      <rect x="58" y="46" width="3" height="3"/>
+      <rect x="55" y="49" width="3" height="3"/>
+    </g>
+    <!-- a title, in lines -->
+    <rect x="37" y="59" width="24" height="3" fill="#f6e7c1"/>
+    <rect x="41" y="65" width="16" height="2" fill="#e3b98a"/>
+    <!-- the ribbon bookmark -->
+    <rect x="58" y="81" width="7" height="6" fill="#e3463d"/>
+    <rect x="58" y="87" width="2" height="3" fill="#e3463d"/>
+    <rect x="63" y="87" width="2" height="3" fill="#e3463d"/>
+  </g>
+</svg>

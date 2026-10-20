@@ -6,6 +6,7 @@ import useLocationStore from "../store/location";
 import useWindowStore from "../store/window.js";
 import { locations } from "../constants/indax";
 import clsx from "clsx";
+import { useIconSrc } from "../utils/pixelIcons";
 
 // Every file and folder in every location, with the folder path it lives in
 const flatten = (items, path = []) =>
@@ -18,6 +19,7 @@ const searchIndex = flatten(Object.values(locations));
 
 const Finder = () => {
   const openWindow = useWindowStore((state) => state.openWindow);
+  const iconSrc = useIconSrc();
   const [isSearching, setIsSearching] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -63,7 +65,7 @@ const Finder = () => {
               item.id === activeLocation.id ? "active" : "not-active",
             )}
           >
-            <img src={item.icon} className=" w-4" alt={item.name} />
+            <img src={iconSrc(item.icon)} className=" w-4" alt={item.name} />
             <p className="text-sm font-medium truncate">{item.name}</p>
           </li>
         ))}
@@ -118,7 +120,7 @@ const Finder = () => {
                   key={`${path}/${item.id}-${item.name}`}
                   onClick={() => openItem(item)}
                 >
-                  <img src={item.icon} alt="" />
+                  <img src={iconSrc(item.icon)} alt="" />
                   <p>{item.name}</p>
                   <span>{path || "Favorites"}</span>
                 </li>
@@ -133,7 +135,7 @@ const Finder = () => {
                 className={item.position}
                 onClick={() => openItem(item)}
               >
-                <img src={item.icon} alt={item.name} />
+                <img src={iconSrc(item.icon)} alt={item.name} />
                 <p>{item.name}</p>
               </li>
             ))}

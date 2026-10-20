@@ -22,8 +22,10 @@ const APP_WORDS = {
   terminal: "terminal tech stack skills command",
   arcade: "games pacman play fun",
   pixie: "pet pixel assistant ai chat",
+  music: "music songs player play audio sound playlist chiptune",
   settings: "preferences wallpaper theme dark light dock",
   trash: "trash bin deleted",
+  book: "book about me story everything pixel bio who developer",
 };
 
 const SECTIONS = ["Apps", "Projects", "Work", "Skills", "Documents", "Links"];
@@ -135,6 +137,7 @@ const EVERYTHING = [...apps, ...projects, ...work, ...skills, ...documents, ...l
 // shown before anything is typed: what a recruiter most likely wants
 const SUGGESTIONS = [
   documents[0],
+  apps.find(({ action }) => action.id === "book"),
   ...work,
   ...projects,
   apps.find(({ action }) => action.id === "terminal"),

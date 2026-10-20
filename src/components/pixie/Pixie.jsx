@@ -6,17 +6,26 @@ import { createPixie, floorLine } from "./engine";
 import { createThings } from "./things";
 import { askPixie, brainEnabled, wakeBrain } from "./brain";
 import { createMind } from "./mind";
+import PortalStory from "./PortalStory";
+import { isMobile } from "../../utils/device";
 import {
   APP_COMMENTS,
+  ARRIVED,
   ASK,
   BRAIN_DOWN,
   BRAIN_TIRED,
   CHAT_INTRO,
   INTRO,
+  LAMP_ON,
+  LAMP_STORY,
+  MUSIC_ON,
+  PICKED,
+  STORY_AGAIN,
   THEME_COMMENTS,
   YOU_WIN,
 } from "./lines";
-import usePixieStore from "../../store/pixie";
+import usePixieStore, { justPicked } from "../../store/pixie";
+import useMusicStore from "../../store/music";
 import useWindowStore from "../../store/window";
 import useThemeStore, { changeTheme } from "../../store/theme";
 import { playSound } from "../../store/sound";
@@ -32,6 +41,27 @@ const VITALS_EVERY = 1500; // ms between updates of her energy etc. for her app
 const THEME_FLIP_KEY = "pixie-flipped-theme"; // she flips the theme once a visit at most
 const RESPECT_CHOICE = 3 * 60_000; // ms after the visitor picks a theme that she leaves it alone
 const SETTLE_IN = 90_000; // ms on the page before she would touch the switch at all
+const STORY_KEY = "pixie-story-seen"; // her story plays on a visitor's first visit only
+const LAMP_STORY_KEY = "pixie-lamp-story"; // the story of her magic ball, told once
+const LAMP_TURN = 1400; // ms for her ball to turn into a lamp before she talks about it
+const LAMP_STORY_LATER = 40_000; // ms after arriving at night before she tells it anyway
+const DANCE_FOR = 7; // s she dances when a song starts
+
+const isNight = () => document.documentElement.dataset.theme === "dark";
+
+// her story plays the first time, on a computer, unless the visitor asked
+// for less motion; her app can replay it any time
+const firstStory = () => {
+  if (isMobile() || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+  try {
+    return localStorage.getItem(STORY_KEY) !== "1";
+  } catch {
+    return false;
+  }
+};
+
+// where her portal opens: near where she would walk in to
+const portalSpot = () => Math.round(window.innerWidth * 0.3);
 
 const ago = (ms) => (ms < 60_000 ? `${Math.round(ms / 1000)}s ago` : `${Math.round(ms / 60_000)} min ago`);
 
@@ -46,9 +76,12 @@ const visible = (text) =>
 
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
-// waits for the startup and login screens to be gone
+// waits for the startup and login screens to be gone, and for the visitor
+// to pick their companion (CompanionPicker.jsx)
 const desktopReady = () =>
-  !document.getElementById("boot") && !document.getElementById("login");
+  !document.getElementById("boot") &&
+  !document.getElementById("login") &&
+  !document.querySelector(".companion-picker");
 
 const PixieOnScreen = () => {
   const root = useRef(null);
@@ -58,6 +91,7 @@ const PixieOnScreen = () => {
   const queue = useRef([]); // lines still to come after the current one
   const [bubble, setBubble] = useState(null); // { text, id, live, kind }
   const [typed, setTyped] = useState(0);
+  const [story, setStory] = useState(null); // { x, lines } while her story plays
 
   // the chat with her AI brain
   const [asking, setAsking] = useState(false);
@@ -215,7 +249,11 @@ const PixieOnScreen = () => {
     const things = createThings({
       layer: layer.current,
       floor: floorLine,
-      onTouch: (name) => pixie.touchThing(name),
+      // the first click on her lamp tells its story
+      onTouch: (name) => {
+        if (name === "lamp" && tellLampStory()) return;
+        pixie.touchThing(name);
+      },
     });
     const pixie = createPixie({
       things,
@@ -248,8 +286,45 @@ const PixieOnScreen = () => {
     pixie.start();
     wakeBrain();
 
+    // her magic ball, from Gourav: a ball by day and a flying lamp at night
+    // (dark mode). The first time a visitor sees it, she tells its story.
+    const tellLampStory = () => {
+      try {
+        if (localStorage.getItem(LAMP_STORY_KEY) === "1") return false;
+      } catch {
+        return false;
+      }
+      if (!things.available() || !pixie.tell(LAMP_STORY)) return false;
+      try {
+        localStorage.setItem(LAMP_STORY_KEY, "1");
+      } catch {
+        // storage blocked: she may tell it again next time
+      }
+      remember("told the visitor the story of your magic ball");
+      return true;
+    };
+    let night = isNight();
+    let lampTimer = null;
+    things.setNight(night, true);
+    const nightWatch = new MutationObserver(() => {
+      if (isNight() === night) return;
+      night = isNight();
+      things.setNight(night);
+      if (!night || !things.available()) return;
+      clearTimeout(lampTimer);
+      lampTimer = setTimeout(() => {
+        if (!tellLampStory()) pixie.comment(pick(LAMP_ON));
+      }, LAMP_TURN);
+    });
+    nightWatch.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    // already night when she arrives: she tells it once she has settled in
+    const lampStoryLater = setTimeout(() => {
+      if (isNight()) tellLampStory();
+    }, LAMP_STORY_LATER);
+
     // the first time in a visit she walks in and says hello; after that she
-    // is simply there
+    // is simply there. Picked again later in the visit, she walks in and
+    // says she's glad.
     const waiting = setInterval(() => {
       if (!desktopReady()) return;
       clearInterval(waiting);
@@ -261,9 +336,26 @@ const PixieOnScreen = () => {
         // storage blocked: she greets every time, which is fine
       }
       const intro = brainEnabled ? [...INTRO, CHAT_INTRO] : INTRO;
-      if (greeted) pixie.appear();
-      else setTimeout(() => pixie.greet(intro), 1200);
+      if (greeted && justPicked()) {
+        remember("were picked by the visitor as their companion");
+        pixie.greet([PICKED]);
+      } else if (greeted) pixie.appear();
+      else if (firstStory()) {
+        // the first visit ever: she comes through her portal
+        pixie.away();
+        setStory({ x: portalSpot(), lines: [ARRIVED, ...intro] });
+      } else setTimeout(() => pixie.greet(intro), 1200);
     }, 400);
+
+    // the button in her app plays her story again
+    const onStory = () => {
+      closeChat();
+      queue.current = [];
+      setBubble(null);
+      pixie.away();
+      setStory({ x: portalSpot(), lines: STORY_AGAIN });
+    };
+    window.addEventListener("pixie:story", onStory);
 
     const onCall = () => pixie.call();
     window.addEventListener("pixie:call", onCall);
@@ -273,6 +365,15 @@ const PixieOnScreen = () => {
       if (brainEnabled) openChat();
     };
     window.addEventListener("pixie:chat", onChat);
+
+    // a song starts in the Music app: she dances to it, a little while
+    const offMusic = useMusicStore.subscribe((state, previous) => {
+      if (!state.playing || (previous.playing && state.current === previous.current)) return;
+      const song = state.songs[state.current];
+      if (!pixie.dance(DANCE_FOR, song.bpm)) return;
+      remember(`danced to "${song.title}" in the Music app`);
+      if (usePixieStore.getState().chatty && Math.random() < 0.5) setTimeout(() => pixie.comment(pick(MUSIC_ON)), 400);
+    });
 
     // how she's doing, for her app in the dock
     const vitals = setInterval(() => {
@@ -327,17 +428,24 @@ const PixieOnScreen = () => {
         setTimeout(() => pixie.comment(YOU_WIN), 600);
         return;
       }
-      // the page applies the theme a moment later
-      setTimeout(
-        () => pixie.comment(THEME_COMMENTS[document.documentElement.dataset.theme]),
-        500,
-      );
+      // the page applies the theme a moment later; at night her lamp has its
+      // own say (above)
+      setTimeout(() => {
+        const theme = document.documentElement.dataset.theme;
+        if (theme === "dark" && things.available()) return;
+        pixie.comment(THEME_COMMENTS[theme]);
+      }, 500);
     });
 
     return () => {
       clearInterval(waiting);
+      nightWatch.disconnect();
+      clearTimeout(lampTimer);
+      clearTimeout(lampStoryLater);
+      window.removeEventListener("pixie:story", onStory);
       window.removeEventListener("pixie:call", onCall);
       window.removeEventListener("pixie:chat", onChat);
+      offMusic();
       clearInterval(vitals);
       usePixieStore.setState({ vitals: null });
       offWindows();
@@ -349,7 +457,17 @@ const PixieOnScreen = () => {
       things.destroy();
       engine.current = null;
     };
-  }, [say, think, remember, openChat]);
+  }, [say, think, remember, openChat, closeChat]);
+
+  // out of the portal she jumps; the story counts as seen, even if skipped
+  const arrive = () => {
+    engine.current?.arrive(story.x, story.lines);
+    try {
+      localStorage.setItem(STORY_KEY, "1");
+    } catch {
+      // storage blocked: she may tell it again next time
+    }
+  };
 
   const length = bubble?.text.length ?? 0;
   const typing = Boolean(bubble) && typed < length;
@@ -388,6 +506,7 @@ const PixieOnScreen = () => {
 
   return (
     <>
+      {story && <PortalStory x={story.x} onArrive={arrive} onDone={() => setStory(null)} />}
       <div ref={layer} className="pixie-things" />
       <div ref={root} className="pixie">
         {asking ? (
@@ -465,11 +584,12 @@ const PixieOnScreen = () => {
 };
 
 // Pixie, a little pixel girl who walks around the desktop, shows people how
-// it works, answers questions and reacts to what they do. Settings › Pixie
-// hides her.
+// it works, answers questions and reacts to what they do. She's there when
+// the visitor picks her as their companion (CompanionPicker.jsx); Settings ›
+// Pixie hides her.
 const Pixie = () => {
-  const show = usePixieStore((state) => state.show);
-  return show ? <PixieOnScreen /> : null;
+  const out = usePixieStore((state) => state.show && state.companion === "pixie");
+  return out ? <PixieOnScreen /> : null;
 };
 
 export default Pixie;

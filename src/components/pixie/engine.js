@@ -25,6 +25,7 @@ const DRAG_START = 6; // px the pointer moves before a press becomes a pick-up
 const DOUBLE_CLICK = 240; // ms to wait for a second click before acting on one
 const PLAN_STALE = 90_000; // ms before an unfinished plan is out of date
 const KICK_REACH = 10; // px from the ball before she can kick it
+const SHAKE_TIME = 1.8; // seconds she and Chompy shake hands
 
 // her taste: light mode late at night is too bright, dark mode in the middle
 // of the day too gloomy
@@ -87,6 +88,9 @@ export const createPixie = ({
     spin: 0, // twirl
     tilt: 0, // swinging while held
     squash: 1, // landing
+    afterLand: null, // what she does once she lands (out of her portal)
+    lampVisit: null, // where her lamp has flown off to, at night: { what, until }
+    lampNextVisit: performance.now() + 20_000,
     blinkIn: 3,
     talking: false,
     busy: false, // chatting with a visitor: she stays put and listens
@@ -139,6 +143,52 @@ export const createPixie = ({
 
   // her things can be switched off, and hide behind full-screen windows
   const hasThings = () => Boolean(things?.available());
+
+  // Chompy, her plant beast, did something, or had something done to him
+  const beastEvent = (what) => {
+    const awake = pet.mode !== "sleep" && pet.mode !== "bed";
+    if (what === "snap" || what === "eat") {
+      const lines = what === "eat" ? LINES.BEAST_ATE : LINES.BEAST_SNAP;
+      if (chatty() && awake && !pet.busy && Math.random() < 0.3) speak(pick(lines));
+      return;
+    }
+    // watering him makes her say so herself
+    if (what === "grew") {
+      if (pet.mode !== "water" && !pet.busy) speak(LINES.PLANT_GREW);
+      return;
+    }
+    const done = {
+      pet: ["petted Chompy", LINES.BEAST_PET],
+    }[what];
+    if (!done) return;
+    active();
+    touched(done[0]);
+    if (chatty() && awake && !pet.busy && Math.random() < 0.7) speak(pick(done[1]));
+  };
+  // at night her ball is a lamp: nothing to kick
+  const lampOn = () => hasThings() && things.ball.isLamp();
+
+  // where her magic lamp flies at night: a night light over her pillow, a
+  // reading light over her book, over the plant she waters, off now and then
+  // to circle her things, and otherwise just behind her shoulder
+  const lampSpot = (now) => {
+    const t = now / 1000;
+    const feet = floor() + H;
+    if (pet.mode === "bed") return { x: things.bed.headX() + 10, y: feet - 72 + Math.sin(t) * 3 };
+    if (pet.mode === "read") return { x: pet.x + W / 2 + (pet.facingLeft ? -24 : 24), y: pet.y + 28 };
+    if (pet.mode === "water") return { x: things.plant.center(), y: feet - 130 };
+    if (now > pet.lampNextVisit && (pet.mode === "idle" || pet.mode === "sit")) {
+      pet.lampVisit = { what: pick(["plant", "bed", "pointer"]), until: now + 5000 };
+      pet.lampNextVisit = now + between(18_000, 30_000);
+    }
+    const visit = pet.lampVisit && now < pet.lampVisit.until ? pet.lampVisit.what : null;
+    const circle = (x, y, r = 26) => ({ x: x + Math.cos(t * 2.2) * r, y: y + Math.sin(t * 2.2) * r * 0.45 });
+    if (visit === "plant") return circle(things.plant.center(), feet - 125, 40);
+    if (visit === "bed") return circle(things.bed.headX() + 40, feet - 80);
+    if (visit === "pointer" && pet.pointerX !== null) return circle(pet.pointerX, feet - 160, 18);
+    const behind = pet.facingLeft ? 1 : -1;
+    return { x: pet.x + W / 2 + behind * 46 + Math.sin(t * 0.8) * 12, y: pet.y + 6 + Math.cos(t * 1.1) * 8 };
+  };
 
   // walks to her bed and climbs in, for `seconds` (0: until someone wakes her);
   // without her bed she naps where she is
@@ -240,8 +290,9 @@ export const createPixie = ({
       if (dislikesTheme() && canFlipTheme()) {
         pastimes.push("theme", "theme", "theme");
       }
-      if (hasThings()) pastimes.push("kick", "kick");
+      if (hasThings() && !lampOn()) pastimes.push("kick", "kick");
       if (hasThings() && things.plant.thirsty()) pastimes.push("water", "water");
+      if (hasThings()) pastimes.push("shake", "shake");
       const what = pick(pastimes);
       if (what === "theme") {
         runStep({ do: "slingshot", to: "theme" });
@@ -322,7 +373,7 @@ export const createPixie = ({
         setMode("aim", pet.shot.theme ? 1.6 : 0.8);
         break;
       case "kick":
-        if (hasThings()) setMode("chase", 8);
+        if (hasThings() && !lampOn()) setMode("chase", 8);
         else wander();
         break;
       case "water":
@@ -341,10 +392,28 @@ export const createPixie = ({
           step.pace === "trot" ? TROT_SPEED : WALK_SPEED,
         );
         break;
+      case "shake":
+        if (!hasThings()) {
+          wander();
+          break;
+        }
+        // stands where her hand meets his leaf, and they shake
+        walkTo(
+          things.plant.hand().x - 80,
+          () => {
+            pet.facingLeft = false;
+            setMode("shake", SHAKE_TIME);
+            things.plant.shake(SHAKE_TIME);
+            if (chatty() && Math.random() < 0.8) speak(pick(LINES.SHAKE_CHOMPY));
+          },
+          step.pace === "trot" ? TROT_SPEED : WALK_SPEED,
+        );
+        break;
       case "read":
         setMode("read", step.seconds ?? 10);
         break;
       case "dance":
+        pet.beat = null;
         setMode("dance", step.seconds ?? 5);
         break;
       case "say":
@@ -467,7 +536,7 @@ export const createPixie = ({
 
       case "chase": {
         // runs after her ball and kicks it once she reaches it
-        if (!hasThings() || pet.time > pet.length) {
+        if (!hasThings() || lampOn() || pet.time > pet.length) {
           rest(1, 2);
           break;
         }
@@ -503,6 +572,15 @@ export const createPixie = ({
             puff("♥", "heart");
             if (chatty()) speak(LINES.PLANT_GREW);
           }
+          // often a thank-you handshake after
+          if (hasThings() && Math.random() < 0.5) runStep({ do: "shake" });
+          else rest(1.5, 3);
+        }
+        break;
+
+      case "shake":
+        if (pet.time > pet.length) {
+          puff("♥", "heart");
           rest(1.5, 3);
         }
         break;
@@ -512,7 +590,8 @@ export const createPixie = ({
         break;
 
       case "dance":
-        pet.lift = Math.abs(Math.sin(pet.time * Math.PI * 2.5)) * 8;
+        // a bounce a beat: the song's (dance(seconds, bpm)), or her own
+        pet.lift = Math.abs(Math.sin((pet.time * Math.PI) / (pet.beat ?? 0.4))) * 8;
         pet.puffIn -= dt;
         if (pet.puffIn <= 0) {
           pet.puffIn = 0.6;
@@ -556,7 +635,7 @@ export const createPixie = ({
           pet.vy = 0;
           pet.tilt = 0;
           setMode("land", 0.3);
-          if (Math.random() < 0.6) speak(pick(LINES.LANDED));
+          if (!pet.afterLand && Math.random() < 0.6) speak(pick(LINES.LANDED));
         }
         break;
 
@@ -564,7 +643,10 @@ export const createPixie = ({
         pet.squash = 1 - 0.18 * Math.sin(Math.PI * Math.min(1, pet.time / 0.3));
         if (pet.time > 0.3) {
           pet.squash = 1;
-          rest(1.5, 3);
+          const next = pet.afterLand;
+          pet.afterLand = null;
+          if (next) next();
+          else rest(1.5, 3);
         }
         break;
 
@@ -616,11 +698,13 @@ export const createPixie = ({
       case "read":
         return pet.time % 4 > 3.6 ? "readPage" : "read";
       case "dance":
-        return ["waveUp", "happy", "waveOut", "happy"][tick(0.25) % 4];
+        return ["waveUp", "happy", "waveOut", "happy"][tick((pet.beat ?? 0.5) / 2) % 4];
       case "chase":
         return ["stepA", "stand", "stepB", "stand"][tick(0.08) % 4];
       case "kick":
         return "stepA";
+      case "shake":
+        return tick(0.15) % 2 ? "shakeB" : "shakeA";
       default:
         if (pet.blinkIn < 0) return "blink";
         if (pet.talking) return tick(0.14) % 2 ? "talk" : "stand";
@@ -671,6 +755,10 @@ export const createPixie = ({
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
     update(dt, now);
+    if (lampOn()) {
+      const { x, y } = lampSpot(now);
+      things.ball.flyTo(x, y);
+    }
     things?.update(dt);
     render();
     frame = requestAnimationFrame(loop);
@@ -814,6 +902,34 @@ export const createPixie = ({
       );
     },
 
+    // out of sight and standing still while her story plays
+    away() {
+      pet.busy = true;
+      pet.plan = [];
+      pet.onArrive = null;
+      setMode("idle", Infinity);
+      root.style.visibility = "hidden";
+    },
+
+    // jumps out of the portal at x (px from the left) and says hello
+    arrive(x, lines) {
+      root.style.visibility = "";
+      pet.busy = false;
+      // the visitor was watching, not away: no nap straight after
+      active();
+      pet.lastSpoke = performance.now();
+      pet.x = clamp(x - W / 2, 0, window.innerWidth - W);
+      pet.y = floor() - 70;
+      pet.vy = -420;
+      pet.spin = 0;
+      pet.afterLand = () => {
+        setMode("wave", 1.6);
+        if (lines) speak(lines);
+      };
+      setMode("fall");
+      puff("✨", "sparkle");
+    },
+
     // just appears somewhere and carries on
     appear() {
       pet.x = between(40, window.innerWidth - W - 40);
@@ -831,6 +947,29 @@ export const createPixie = ({
         },
         TROT_SPEED,
       );
+    },
+
+    // dances for a while, to a song's beat (the Music app): unless she's
+    // being carried or busy, and she gets out of bed for it. True if she does.
+    dance(seconds, bpm) {
+      if (pet.busy || pet.mode === "held" || pet.mode === "fall") return false;
+      active();
+      pet.plan = [];
+      pet.onArrive = null;
+      pet.beat = bpm ? 60 / bpm : null;
+      setMode("dance", seconds);
+      puff("♪", "note");
+      return true;
+    },
+
+    // a little story of hers, told if she's awake and free; true if she told it
+    tell(lines) {
+      const asleep = pet.mode === "sleep" || pet.mode === "bed";
+      if (pet.busy || asleep || pet.mode === "held" || pet.mode === "fall") return false;
+      pet.lastComment = performance.now();
+      setMode("wave", 1.6);
+      speak(lines);
+      return true;
     },
 
     // a remark about something you did, if she is free and not chatting
@@ -858,6 +997,10 @@ export const createPixie = ({
 
     // the visitor clicked one of her things (the ball has already been kicked)
     touchThing(name) {
+      if (name.startsWith("plant-")) {
+        beastEvent(name.slice("plant-".length));
+        return;
+      }
       active();
       if (pet.busy || pet.mode === "held" || pet.mode === "fall") return;
       if (name === "bed") {
@@ -876,6 +1019,12 @@ export const createPixie = ({
         if (pet.mode !== "bed" && pet.mode !== "sleep") {
           pet.plan = [];
           setMode("chase", 8);
+        }
+      } else if (name === "lamp") {
+        touched("clicked your magic lamp");
+        if (pet.mode !== "bed" && pet.mode !== "sleep") {
+          setMode("hop");
+          speak(pick(LINES.LAMP_CLICKED));
         }
       } else if (name === "plant") {
         touched("asked you to water your plant");

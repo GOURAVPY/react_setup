@@ -165,6 +165,40 @@ export const BALL = [
   "..KKKK..",
 ].map((row) => [...row]);
 
+// ------------------------------------------------------------ the lamp
+
+// her ball at night: a glowing lamp with a little brass cap and wings, which
+// flap between the two frames
+export const LAMP_W = 12;
+export const LAMP_H = 10;
+
+export const LAMP_FRAMES = [
+  [
+    ".A........A.",
+    "AaA..KK..AaA",
+    ".AaKKRRKKaA.",
+    "..KlLLLLlK..",
+    "..KLLWWLLK..",
+    "..KLWWWLLK..",
+    "..KlLLLLlK..",
+    "...KlLLlK...",
+    "....KKKK....",
+    "............",
+  ],
+  [
+    "............",
+    ".....KK.....",
+    "...KKRRKK...",
+    "..KlLLLLlK..",
+    "AAKLLWWLLKAA",
+    "AaKLWWWLLKaA",
+    ".AKlLLLLlKA.",
+    "...KlLLlK...",
+    "....KKKK....",
+    "............",
+  ],
+].map((frame) => frame.map((row) => [...row]));
+
 // ------------------------------------------------------------ drawing
 
 export const drawGrid = (ctx, g, scale, palette) => {

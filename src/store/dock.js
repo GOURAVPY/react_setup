@@ -5,6 +5,7 @@ const STORAGE_KEY = "dock";
 // How the app icons are drawn, in the dock and on the phone home screen
 // (see src/components/AppIcon.jsx)
 export const ICON_STYLES = [
+  { id: "pixel", label: "Pixel" },
   { id: "macos", label: "macOS" },
   { id: "flat", label: "Flat" },
   { id: "glass", label: "Glass" },
@@ -26,7 +27,8 @@ export const DOCK_DEFAULTS = {
   minimizeEffect: "genie",
   autohide: false,
   indicators: true, // dot under apps that are open
-  iconStyle: "macos",
+  iconStyle: "pixel",
+  iconsVersion: 2, // 2: Pixel became the default
 };
 
 const CHOICES = { iconStyle: ICON_STYLES, minimizeEffect: MINIMIZE_EFFECTS };
@@ -39,6 +41,11 @@ const isValid = (key, value) =>
 const readStored = () => {
   try {
     const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "{}");
+    // macOS was the default before Pixel: saved from back then, it's Pixel now
+    if (stored.iconsVersion !== DOCK_DEFAULTS.iconsVersion) {
+      if (stored.iconStyle === "macos") delete stored.iconStyle;
+      stored.iconsVersion = DOCK_DEFAULTS.iconsVersion;
+    }
     // only keep known settings, so an old or edited value cannot break the dock
     return Object.fromEntries(
       Object.entries(stored).filter(([key, value]) => isValid(key, value)),

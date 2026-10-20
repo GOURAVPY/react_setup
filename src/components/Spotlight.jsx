@@ -5,6 +5,7 @@ import useWindowStore from "../store/window";
 import useLocationStore from "../store/location";
 import useLaunchApp from "../store/launch";
 import AppIcon from "./AppIcon";
+import { useIconSrc } from "../utils/pixelIcons";
 import { searchSpotlight } from "./spotlightSearch";
 
 // macOS-style Spotlight: a search box over the desktop that finds the apps,
@@ -12,6 +13,7 @@ import { searchSpotlight } from "./spotlightSearch";
 // Opened from the menu bar's magnifier, or ⌘/Ctrl + Space or K anywhere.
 
 const ResultIcon = ({ icon }) => {
+  const iconSrc = useIconSrc();
   if (icon.app) return <AppIcon id={icon.app} image={icon.image} />;
   if (icon.glyph) {
     const Glyph = icon.glyph;
@@ -23,7 +25,7 @@ const ResultIcon = ({ icon }) => {
   }
   return (
     <span className="picture" style={icon.bg ? { background: icon.bg } : undefined}>
-      <img src={icon.src} alt="" />
+      <img src={iconSrc(icon.src)} alt="" />
     </span>
   );
 };

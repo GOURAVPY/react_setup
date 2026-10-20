@@ -1,6 +1,11 @@
 import { useRef } from "react";
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import clsx from "clsx";
+import useMusicStore from "../store/music";
+
+const SUBTITLE = "Hi, I'M Gourav Welcome to my";
+const TITLE = "portfolio";
 const renderText = (text, className, baseweight = 400) => {
   return [...text].map((char, i) => (
     <span
@@ -54,6 +59,8 @@ const setuptexthovr = (container, type) => {
 const Welcome = () => {
   const pareref = useRef(null);
   const subref = useRef(null);
+  // while the Music app plays, the words echo (.fx-echo in index.css)
+  const playing = useMusicStore((state) => state.playing);
 
   useGSAP(() => {
     const parecleanUP = setuptexthovr(pareref.current, "pareref");
@@ -66,15 +73,23 @@ const Welcome = () => {
   }, []);
   return (
     <section id="welcome">
-      <p ref={subref}>
-        {renderText(
-          "Hi, I'M Gourav Welcome to my",
-          "text-3xl font-georama",
-          100,
-        )}
+      {/* the lines carry their letters' size and weight too, so the echoes
+          (drawn from data-text) sit exactly on the words */}
+      <p
+        ref={subref}
+        className={clsx("text-3xl font-georama", playing && "fx-echo")}
+        style={{ fontVariationSettings: "'wght' 100" }}
+        data-text={SUBTITLE}
+      >
+        {renderText(SUBTITLE, "text-3xl font-georama", 100)}
       </p>
-      <h1 ref={pareref} className="mt-7">
-        {renderText("portfolio", "text-9xl italic font-georama")}
+      <h1
+        ref={pareref}
+        className={clsx("mt-7 text-9xl italic font-georama", playing && "fx-echo")}
+        style={{ fontVariationSettings: "'wght' 400" }}
+        data-text={TITLE}
+      >
+        {renderText(TITLE, "text-9xl italic font-georama")}
       </h1>
 
     </section>

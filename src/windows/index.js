@@ -9,6 +9,8 @@ import Photos from "./Photos";
 import Settings from "./Settings";
 import Arcade from "./Arcade";
 import PixieApp from "./PixieApp";
+import Book from "./Book";
+import Music from "./Music";
 
 export {
   Terminal,
@@ -22,4 +24,6 @@ export {
   Settings,
   Arcade,
   PixieApp,
+  Book,
+  Music,
 };

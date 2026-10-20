@@ -10,22 +10,21 @@ const MAX_DURATION = 8000; // give up waiting on a slow connection
 const FADE_DURATION = 600;
 const LOGO_DELAY = 900; // power button fades out, then the logo fades in
 
+// the dock's icons are the Pixel style's (utils/pixelIcons.js) unless a
+// visitor picked another style
 const ASSETS = [
   "/images/wallpaper.png",
-  "/images/finder.png",
-  "/images/safari.png",
-  "/images/photos.png",
-  "/images/contact.png",
-  "/images/terminal.png",
-  "/images/trash.png",
-  "/images/arcade.svg",
-  "/images/folder.png",
+  ...["finder", "safari", "photos", "contact", "terminal", "arcade", "music", "pixie", "book", "settings", "trash", "folder"].map(
+    (name) => `/images/pixel/${name}.svg`,
+  ),
 ];
 
 // Pictures inside the windows. Fetched and decoded once the desktop is up,
 // so the first time a window opens its images are already there instead of
 // popping in while it pours out of the dock.
 const WINDOW_IMAGES = [
+  "/images/gourav.svg",
+  "/images/her.svg",
   "/images/folder.png",
   "/images/image.png",
   "/images/txt.png",

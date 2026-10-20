@@ -16,6 +16,7 @@ import useThemeStore, { changeTheme } from "../store/theme";
 import useWallpaperStore, { CUSTOM_ID, WALLPAPERS } from "../store/wallpaper";
 import useDockStore, { ICON_STYLES, MINIMIZE_EFFECTS } from "../store/dock";
 import useSoundStore, { playSound } from "../store/sound";
+import useTextStore, { TEXT_STYLES } from "../store/text";
 import AppIcon from "../components/AppIcon";
 import Toggle from "../components/Toggle";
 
@@ -43,6 +44,7 @@ const restart = () => {
 
 const AppearancePane = () => {
   const theme = useThemeStore((state) => state.theme);
+  const { textStyle, setTextStyle } = useTextStore();
 
   return (
     <div className="pane">
@@ -59,6 +61,24 @@ const AppearancePane = () => {
           >
             <span className={clsx("preview", value)}>
               <i />
+            </span>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <h4>Text style</h4>
+      <div className="text-styles" role="radiogroup" aria-label="Text style">
+        {TEXT_STYLES.map(({ id, label }) => (
+          <button
+            key={id}
+            type="button"
+            role="radio"
+            aria-checked={textStyle === id}
+            onClick={() => setTextStyle(id)}
+          >
+            <span className={clsx("preview", id)} aria-hidden="true">
+              Aa
             </span>
             {label}
           </button>

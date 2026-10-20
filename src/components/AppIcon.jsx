@@ -1,9 +1,11 @@
 import {
+  BookOpen,
   Compass,
   FileText,
   FolderOpen,
   Gamepad2,
   Images,
+  Music,
   Settings,
   Sparkles,
   SquareTerminal,
@@ -12,10 +14,12 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import useDockStore from "../store/dock";
+import { pixelVersion } from "../utils/pixelIcons";
 
 // The symbol and colours each app gets in the drawn icon styles: a gradient
 // (from → to) and, where it differs, the colour its symbol glows in the Neon
-// style. The "macos" style uses the app's own picture from public/images.
+// style. The "macos" style uses the app's own picture from public/images, and
+// the "pixel" style its pixel-art one (utils/pixelIcons.js).
 const GLYPHS = {
   finder: { Glyph: FolderOpen, from: "#38bdf8", to: "#2563eb" },
   safari: { Glyph: Compass, from: "#22d3ee", to: "#0284c7" },
@@ -27,6 +31,8 @@ const GLYPHS = {
   settings: { Glyph: Settings, from: "#9ca3af", to: "#4b5563", glow: "#e5e7eb" },
   trash: { Glyph: Trash2, from: "#cbd5e1", to: "#64748b" },
   resume: { Glyph: FileText, from: "#f87171", to: "#dc2626" },
+  book: { Glyph: BookOpen, from: "#fbbf24", to: "#b45309", glow: "#fde68a" },
+  music: { Glyph: Music, from: "#fb7185", to: "#be123c", glow: "#fda4af" },
 };
 
 /**
@@ -39,6 +45,17 @@ const AppIcon = ({ id, image, style, className }) => {
   const chosen = useDockStore((state) => state.iconStyle);
   const iconStyle = style ?? chosen;
   const glyph = GLYPHS[id];
+
+  if (iconStyle === "pixel") {
+    return (
+      <img
+        src={pixelVersion(`/images/${image}`)}
+        alt=""
+        loading="lazy"
+        className={clsx("app-icon", "pixel", className)}
+      />
+    );
+  }
 
   if (iconStyle === "macos" || !glyph) {
     return (

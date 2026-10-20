@@ -34,6 +34,15 @@ export const PALETTE = {
   k: "#5a3a28", // soil
   y: "#e6dcef", // pillow shade
   s: "#b9b2c8", // pebble
+  L: "#fff3c4", // her magic lamp's light
+  l: "#ffc94d", // …its warm edge
+  A: "#f1ecff", // …its little wings
+  a: "#b9a8f5", // …their shade
+  V: "#d6e88f", // Chompy's head
+  v: "#a9c060", // …its shade
+  Q: "#4a1f3d", // …inside his mouth
+  q: "#8e3a7a", // …his purple lips
+  r: "#c7577f", // …the pink edges of his leaves
 };
 
 const PAD = 3; // the 16-pixel-wide body sits in the middle of the frame
@@ -162,8 +171,17 @@ const WATERING_ARM = [
   [17, 21, "KKK"],
 ];
 
+// holding her hand out to shake Chompy's leaf, up and down
+const SHAKE_ARM = (y) => [
+  [15, y, "KKKKKK"],
+  [15, y + 1, "SSSSSK"],
+  [15, y + 2, "KKKKKK"],
+];
+
 // each pose: which arm pixels to clear, then which to paint
 const ARMS = {
+  shakeA: { off: RIGHT_ARM_OFF, on: SHAKE_ARM(13) },
+  shakeB: { off: RIGHT_ARM_OFF, on: SHAKE_ARM(14) },
   down: { off: [], on: [] },
   waveUp: { off: RIGHT_ARM_OFF, on: RIGHT_ARM_UP },
   waveOut: { off: RIGHT_ARM_OFF, on: RIGHT_ARM_OUT },
@@ -246,6 +264,13 @@ export const FRAMES = {
   water: build({ arms: "water" }),
   read: build({ legs: "sit", eyes: "down", item: "book" }),
   readPage: build({ legs: "sit", eyes: "down", item: "page" }),
+  // shaking hands with Chompy, her plant beast
+  shakeA: build({ arms: "shakeA", eyes: "happy" }),
+  shakeB: build({ arms: "shakeB", eyes: "happy", mouth: "open" }),
+  // hugging the book Gourav gave her, in her story (storyArt.js)
+  carry: build({ eyes: "happy", item: "book" }),
+  carryA: build({ legs: "stepA", item: "book" }),
+  carryB: build({ legs: "stepB", item: "book" }),
 };
 
 // draws a frame onto a canvas context, facing left or right
