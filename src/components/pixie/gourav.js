@@ -3,7 +3,8 @@
 // and legs, with arms posed for each frame. Taller than her, with a red scarf,
 // a blue hoodie, and on his chest his half of the half-heart necklace he gave
 // someone special (her.js has the other half). Faces right; the story mirrors
-// him to face left.
+// him to face left. He sits with her on her park bench (castArt.js), and they
+// hug there.
 
 export const GOURAV_W = 24;
 export const GOURAV_H = 30;
@@ -73,7 +74,12 @@ const SCARF_TAIL = [
   [3, 15, "KcK"],
 ];
 
+// sitting, he's this many rows lower from the waist up
+const SIT_DROP = 1;
+
 const LEGS = {
+  // sitting on her park bench: knees towards you
+  sit: [7, 23, ["KPPPPPPPPK", "KPPPKKPPPK", ".KPPKKPPK.", ".KPPKKPPK.", ".KPPKKPPK.", "KFFFKKFFFK", "KKKKKKKKKK"]],
   stand: [
     7,
     22,
@@ -136,6 +142,9 @@ const LEFT_ARM = {
     [5, 19, "KJSS"],
     [5, 20, "KKK"],
   ],
+  // round behind her on the bench, hugging her (castArt.js draws his hand on
+  // her far shoulder)
+  none: [],
 };
 
 const mirror = (pieces) => pieces.map(([x, y, text]) => [GOURAV_W - x - text.length, y, [...text].reverse().join("")]);
@@ -211,23 +220,32 @@ const POSES = {
   mugStep: { legs: "step", left: "down", right: "mug" },
   // reading a book from his shelf
   read: { legs: "stand", left: "read", right: "read" },
+  // on her park bench beside her; and hugging her there, his head on hers,
+  // his arm round her
+  sit: { legs: "sit", left: "down", right: "down", sit: true },
+  hug: { legs: "sit", left: "none", right: "down", sit: true, lean: -1 },
 };
 
-const build = ({ legs, left, right }, talking) => {
+// sitting, all of him from the waist up is lower (his legs are drawn where
+// they go); leaning, his head tips over to the left
+const build = ({ legs, left, right, sit = false, lean = 0 }, talking) => {
   const grid = Array.from({ length: GOURAV_H }, () => Array(GOURAV_W).fill("."));
   const paint = (x, y, text) =>
     [...text].forEach((c, i) => {
       if (c !== "." && grid[y]?.[x + i] !== undefined) grid[y][x + i] = c;
     });
-  const part = ([x, y, rows]) => rows.forEach((row, i) => paint(x, y + i, row));
+  const part = ([x, y, rows], dx = 0, dy = 0) => rows.forEach((row, i) => paint(x + dx, y + dy + i, row));
+  const pieces = (list, dx, dy) => list.forEach(([x, y, text]) => paint(x + dx, y + dy, text));
+  const drop = sit ? SIT_DROP : 0;
+  const tip = lean ? 1 : 0;
 
-  SCARF_TAIL.forEach(([x, y, text]) => paint(x, y, text));
-  part(HEAD);
-  part(BODY);
+  pieces(SCARF_TAIL, 0, drop);
+  part(HEAD, lean, drop + tip);
+  part(BODY, 0, drop);
   part(LEGS[legs]);
-  LEFT_ARM[left].forEach(([x, y, text]) => paint(x, y, text));
-  RIGHT_ARM[right].forEach(([x, y, text]) => paint(x, y, text));
-  if (talking) paint(11, 11, "MM");
+  pieces(LEFT_ARM[left], 0, drop);
+  pieces(RIGHT_ARM[right], 0, drop);
+  if (talking) paint(11 + lean, 11 + drop + tip, "MM");
   return grid;
 };
 
