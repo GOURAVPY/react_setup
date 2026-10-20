@@ -3,6 +3,7 @@
 // black hair, a red dress with gold trim, gold earrings and a gold bangle,
 // and Gourav's gifts: a pink bead bracelet, and her half of a half-heart
 // necklace (he wears the other half). Faces right; mirrored to face left.
+// She sits on her park bench too (castArt.js), and hugs Gourav there.
 
 export const HER_W = 24;
 export const HER_H = 30;
@@ -82,8 +83,26 @@ const BODICE = [
   ["..KSSSSK..", ".KYSSSSYK.", "KRYYYYYYRK", "KRRRRRRRRK", "KRRrRRrRRK", ".KRRRRRRK."],
 ];
 
-// her long skirt, still or swishing as she walks
+// sitting, she's this many rows lower from the waist up
+const SIT_DROP = 3;
+
+// her long skirt, still or swishing as she walks, or over her knees as she
+// sits, her ankles showing
 const SKIRT = {
+  sit: [
+    5,
+    22,
+    [
+      "..KRRRRRRRRK..",
+      ".KRRRrRRrRRRK.",
+      "KRRRRRRRRRRRRK",
+      "KYYYYYYYYYYYYK",
+      "KKKKKKKKKKKKKK",
+      "....KSK.KSK...",
+      "....KSK.KSK...",
+      "...KFFK.KFFK..",
+    ],
+  ],
   stand: [
     5,
     19,
@@ -152,6 +171,8 @@ const LEFT_ARM = {
     [6, 16, "KRRSSK"],
     [7, 17, "KKKKK"],
   ],
+  // round behind Gourav, hugging him (castArt.js draws her hand on his far side)
+  none: [],
 };
 
 const mirror = (pieces) => pieces.map(([x, y, text]) => [HER_W - x - text.length, y, [...text].reverse().join("")]);
@@ -161,6 +182,7 @@ const RIGHT_ARM = {
   up: mirror(LEFT_ARM.up),
   out: mirror(LEFT_ARM.out),
   clap: mirror(LEFT_ARM.clap),
+  none: [],
   // held out at the easel (castArt.js), with a brush
   paint: [
     [17, 12, "KKKK"],
@@ -185,25 +207,34 @@ const POSES = {
   out: { skirt: "step", left: "out", right: "out" },
   clap: { skirt: "stand", left: "clap", right: "clap" },
   twirl: { skirt: "step", left: "up", right: "down" },
+  // on her park bench, her hands in her lap; and hugging Gourav there, her
+  // head on his shoulder, her arm round him
+  sit: { skirt: "sit", left: "down", right: "down", sit: true },
+  hug: { skirt: "sit", left: "down", right: "none", sit: true, lean: 1 },
 };
 
-const build = ({ skirt, left, right }, talking) => {
+// sitting, all of her from the waist up is lower (her skirt is drawn where
+// it goes); leaning, her head tips over to the right
+const build = ({ skirt, left, right, sit = false, lean = 0 }, talking) => {
   const grid = Array.from({ length: HER_H }, () => Array(HER_W).fill("."));
   const paint = (x, y, text) =>
     [...text].forEach((c, i) => {
       if (c !== "." && grid[y]?.[x + i] !== undefined) grid[y][x + i] = c;
     });
-  const part = ([x, y, rows]) => rows.forEach((row, i) => paint(x, y + i, row));
+  const part = ([x, y, rows], dx = 0, dy = 0) => rows.forEach((row, i) => paint(x + dx, y + dy + i, row));
+  const pieces = (list, dx, dy) => list.forEach(([x, y, text]) => paint(x + dx, y + dy, text));
+  const drop = sit ? SIT_DROP : 0;
+  const tip = lean ? 1 : 0;
 
-  HAIR_BACK.forEach(([x, y, text]) => paint(x, y, text));
+  pieces(HAIR_BACK, lean, drop);
   part(SKIRT[skirt]);
-  part(BODICE);
-  part(HEAD);
-  NECKLACE.forEach(([x, y, text]) => paint(x, y, text));
-  EARRINGS.forEach(([x, y, text]) => paint(x, y, text));
-  LEFT_ARM[left].forEach(([x, y, text]) => paint(x, y, text));
-  RIGHT_ARM[right].forEach(([x, y, text]) => paint(x, y, text));
-  if (talking) paint(11, 11, "OO");
+  part(BODICE, 0, drop);
+  part(HEAD, lean, drop + tip);
+  pieces(NECKLACE, 0, drop);
+  pieces(EARRINGS, lean, drop + tip);
+  pieces(LEFT_ARM[left], 0, drop);
+  pieces(RIGHT_ARM[right], 0, drop);
+  if (talking) paint(11 + lean, 11 + drop + tip, "OO");
   return grid;
 };
 
