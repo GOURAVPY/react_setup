@@ -636,3 +636,29 @@ export const TREE = (() => {
   for (let x = 7; x <= 16; x++) set(x, TREE_H - 1, x % 3 ? "G" : "K");
   return grid.map((row) => row.join(""));
 })();
+
+// where they sit on the bench (the top left of their art, in the picture):
+// her on the left with room beside her, him beside her; and closer, hugging,
+// cheek to cheek (he's drawn over her, then their arms over both)
+export const PARK_SEATS = {
+  her: { x: 0 },
+  him: { x: 16 },
+  hug: { her: { x: 1 }, him: { x: 15 } },
+};
+// hugging, the arms that show round each other, in the picture: his hand on
+// her far shoulder (his arm's round behind her), and her arm round his waist,
+// her bracelet on it
+export const HUG_ARMS = {
+  his: [
+    [7, 16, "KKKK"],
+    [7, 17, "KSSSK"],
+    [7, 18, "KSSSK"],
+    [8, 19, "KKK"],
+  ],
+  hers: [
+    [19, 19, "KRK"],
+    [20, 20, "KSSK"],
+    [22, 21, "KSSSSSK"],
+    [22, 22, "KKKKNSSK"],
+  ],
+};
