@@ -962,6 +962,12 @@ export const createPixie = ({
       return true;
     },
 
+    // stops dancing to a song, there and then (the music's stopped); her own
+    // little dances go on
+    stopDancing() {
+      if (pet.mode === "dance" && pet.beat) pet.length = Math.min(pet.length, pet.time);
+    },
+
     // a little story of hers, told if she's awake and free; true if she told it
     tell(lines) {
       const asleep = pet.mode === "sleep" || pet.mode === "bed";

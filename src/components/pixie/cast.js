@@ -375,6 +375,12 @@ export const createPerson = (who, { root, canvas, still, onLand, beat }) => {
       return true;
     },
     dancing: () => performance.now() / 1000 < me.danceUntil,
+    // stops dancing, there and then (the music's stopped)
+    stopDancing() {
+      if (performance.now() / 1000 >= me.danceUntil) return;
+      me.danceUntil = 0;
+      me.strollAt = performance.now() / 1000 + between(...STROLL_EVERY);
+    },
 
     // walks over to a screen x and looks at it
     goTo(x) {
