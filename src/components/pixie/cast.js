@@ -411,6 +411,11 @@ export const createPerson = (who, { root, canvas, still, onLand, beat }) => {
       me.job = { ...job, until: 0 };
     },
     stopWork: () => endJob(true),
+    // stays at the work they're at, however long it was going to be, till
+    // stopWork() (Gourav at his desk while she visits)
+    keepWorking() {
+      if (me.job?.until) me.job.until = Infinity;
+    },
 
     // what they're up to, for their app: "held", "fall", "arriving", "work",
     // "walk" or "idle"
