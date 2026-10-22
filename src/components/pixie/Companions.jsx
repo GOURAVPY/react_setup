@@ -54,7 +54,7 @@ import {
   VISIT_TALKS,
 } from "./castLines";
 import usePixieStore, { justPicked } from "../../store/pixie";
-import useMusicStore from "../../store/music";
+import useMusicStore, { songLeft, songStarted } from "../../store/music";
 import * as synth from "../../music/synth";
 import useWindowStore from "../../store/window";
 import { playSound } from "../../store/sound";
@@ -74,7 +74,6 @@ const BREW_SECONDS = 3.2; // s at the coffee machine
 const THOUGHTS_KEPT = 8; // recent thoughts their app shows
 const READ_EVERY = 0.3; // how often a spell of work is a reading break instead (Gourav)
 const READ_SECONDS = [14, 24]; // s he reads for
-const DANCE_FOR = 7; // s they dance when a song starts
 const BENCH_EVERY = 0.35; // how often a spell of work is a sit on her park bench instead (her)
 const BENCH_FOR = [16_000, 26_000]; // ms she sits there, on her own
 const VISIT_CHANCE = 0.7; // how often Gourav comes to sit with her
@@ -418,13 +417,15 @@ const CompanionOnScreen = ({ who }) => {
       if (Math.random() < 0.45) setTimeout(() => say(pick(BIRD_REPLY)), 1500);
     };
 
-    // a song starts: they dance to it a little while (up from his desk, if
-    // he's at it; not with a mug in his hand), and Neel dances on his perch
-    // (castThings.js), squawks about it, and she cheers him on
+    // a song starts: she dances to it, all the way through, and Neel dances
+    // on his perch (castThings.js), squawks about it, and she cheers him on.
+    // The music stops, and so does she.
     const offMusic = useMusicStore.subscribe((state, previous) => {
-      if (!state.playing) return;
-      const fresh = !previous.playing || state.current !== previous.current;
-      if (!fresh) return;
+      if (!state.playing) {
+        if (previous.playing) person.stopDancing();
+        return;
+      }
+      if (!songStarted(state, previous)) return;
       // Gourav doesn't dance: music helps him focus, so he says so and
       // gets on with his work (his head bobs to it at his desk, castThings.js)
       if (who === "gourav") {
@@ -435,7 +436,7 @@ const CompanionOnScreen = ({ who }) => {
       }
       if (greeted) {
         person.stopWork();
-        if (person.dance(DANCE_FOR) && usePixieStore.getState().chatty && Math.random() < 0.5) {
+        if (person.dance(songLeft(state)) && usePixieStore.getState().chatty && Math.random() < 0.5) {
           setTimeout(() => say(pick(DANCE_LINES[who])), 300);
         }
       }

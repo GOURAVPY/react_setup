@@ -20,6 +20,14 @@ const saved = (() => {
 
 let ticker = null;
 
+// a song starting, from one change of the store to the next: playing after a
+// pause, another song, or the same one again from the top (repeat, or
+// dragged back)
+export const songStarted = (state, previous) =>
+  state.playing && (!previous.playing || state.current !== previous.current || state.position + 1 < previous.position);
+// seconds left of the song that's playing
+export const songLeft = (state) => Math.max(1, state.songs[state.current].duration - state.position);
+
 const useMusicStore = create((set, get) => {
   const keep = () => {
     const { volume, shuffle, repeat } = get();

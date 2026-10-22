@@ -25,7 +25,7 @@ import {
   YOU_WIN,
 } from "./lines";
 import usePixieStore, { justPicked } from "../../store/pixie";
-import useMusicStore from "../../store/music";
+import useMusicStore, { songLeft, songStarted } from "../../store/music";
 import useWindowStore from "../../store/window";
 import useThemeStore, { changeTheme } from "../../store/theme";
 import { playSound } from "../../store/sound";
@@ -45,7 +45,6 @@ const STORY_KEY = "pixie-story-seen"; // her story plays on a visitor's first vi
 const LAMP_STORY_KEY = "pixie-lamp-story"; // the story of her magic ball, told once
 const LAMP_TURN = 1400; // ms for her ball to turn into a lamp before she talks about it
 const LAMP_STORY_LATER = 40_000; // ms after arriving at night before she tells it anyway
-const DANCE_FOR = 7; // s she dances when a song starts
 
 const isNight = () => document.documentElement.dataset.theme === "dark";
 
@@ -366,11 +365,16 @@ const PixieOnScreen = () => {
     };
     window.addEventListener("pixie:chat", onChat);
 
-    // a song starts in the Music app: she dances to it, a little while
+    // a song starts in the Music app: she dances to it, all the way through;
+    // the music stops, and so does she
     const offMusic = useMusicStore.subscribe((state, previous) => {
-      if (!state.playing || (previous.playing && state.current === previous.current)) return;
+      if (!state.playing) {
+        if (previous.playing) pixie.stopDancing();
+        return;
+      }
+      if (!songStarted(state, previous)) return;
       const song = state.songs[state.current];
-      if (!pixie.dance(DANCE_FOR, song.bpm)) return;
+      if (!pixie.dance(songLeft(state), song.bpm)) return;
       remember(`danced to "${song.title}" in the Music app`);
       if (usePixieStore.getState().chatty && Math.random() < 0.5) setTimeout(() => pixie.comment(pick(MUSIC_ON)), 400);
     });
