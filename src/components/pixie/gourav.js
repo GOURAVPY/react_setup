@@ -224,6 +224,8 @@ const POSES = {
   // his arm round her
   sit: { legs: "sit", left: "down", right: "down", sit: true },
   hug: { legs: "sit", left: "none", right: "down", sit: true, lean: -1 },
+  // standing, hugging her when she visits him at his desk (castThings.js)
+  embrace: { legs: "stand", left: "none", right: "down", lean: -1 },
 };
 
 // sitting, all of him from the waist up is lower (his legs are drawn where

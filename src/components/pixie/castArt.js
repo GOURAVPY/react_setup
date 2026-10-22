@@ -662,3 +662,29 @@ export const HUG_ARMS = {
     [22, 22, "KKKKNSSK"],
   ],
 };
+
+// her visit to his desk (castThings.js): the two of them standing, hugging,
+// drawn together in a picture in front of his desk, with the arms that show
+// round each other. It's drawn as on her bench (PARK_SEATS.hug, her on the
+// left), then mirrored, so she's on his right and his lunch shows.
+export const EMBRACE_W = 40;
+export const EMBRACE_H = 30;
+export const EMBRACE_ARMS = {
+  his: [
+    [7, 13, "KKKK"],
+    [7, 14, "KSSSK"],
+    [7, 15, "KSSSK"],
+    [8, 16, "KKK"],
+  ],
+  hers: [
+    [19, 16, "KRK"],
+    [20, 17, "KSK"],
+    [20, 18, "KSSK"],
+    [21, 19, "KSSK"],
+    [22, 20, "KSSSSSK"],
+    [22, 21, "KKKKNSSK"],
+  ],
+};
+// the lunch she brings him, in a steel tiffin, and where it goes on his desk
+export const LUNCH = ["..KKK..", ".K...K.", "KKKKKKK", "KLLLLlK", "KKKKKKK", "KLLLLlK", "KKKKKKK"];
+export const LUNCH_AT = { x: 1, y: 16 };
