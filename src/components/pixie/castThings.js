@@ -2,7 +2,9 @@
 // like Pixie's bed, ball and plant (things.js). Gourav's desk, with his
 // computer, coffee and chair (he sits in it to code, his back to you), is on
 // the left; his coffee machine and his bookshelf (he reads a book from it now
-// and then) are over on the right; and his cleaning robot sweeps the floor;
+// and then) are over on the right; and his cleaning robot sweeps the floor.
+// When she comes to see him, she leaves lunch on his desk, and they hug in
+// front of it;
 // her easel, with Neel her parakeet on it, is on the right, and her park
 // bench, by a blossom tree, on the left (she sits there now and then, and
 // Gourav comes to sit with her). Call tick(seconds) every frame.
@@ -36,7 +38,12 @@ import {
   EASEL_H,
   EASEL_PALETTE,
   EASEL_W,
+  EMBRACE_ARMS,
+  EMBRACE_H,
+  EMBRACE_W,
   HUG_ARMS,
+  LUNCH,
+  LUNCH_AT,
   MUG,
   MUG_AT,
   MUG_X,
@@ -402,6 +409,10 @@ const createGouravThings = ({ layer, onTouch, onPerson }) => {
   const robot = createRobot({ layer, onTouch });
   const machine = makeThing(layer, COFFEE_W, COFFEE_H, "Gourav's coffee machine");
   const shelf = makeThing(layer, SHELF_W, SHELF_H, "Gourav's bookshelf: open his book");
+  // the two of them hugging, when she visits: in front of his desk, and only
+  // there while they hug
+  const embrace = makeThing(layer, EMBRACE_W, EMBRACE_H, "Gourav and her, hugging");
+  embrace.box.style.display = "none";
   let bookOut = false; // the book he's reading, off the shelf
   const drawShelf = () => {
     const { ctx } = shelf;
@@ -433,6 +444,10 @@ const createGouravThings = ({ layer, onTouch, onPerson }) => {
 
   let seated = false; // in his chair, typing
   let turned = false; // looking sideways at you, talking
+  let visitor = false; // she's come to see him: he stays turned round
+  let lunch = false; // the lunch she brought, on his desk
+  let hugging = false;
+  let heartAt = 0;
   let typedAt = 0;
   let lines = 0; // lines of code typed this visit
   let steam = 0;
@@ -470,6 +485,8 @@ const createGouravThings = ({ layer, onTouch, onPerson }) => {
       );
     }
     ctx.globalAlpha = 1;
+    // the lunch she brought him
+    if (lunch) paint(ctx, LUNCH, DESK_PALETTE, LUNCH_AT.x, LUNCH_AT.y);
     // his mug on the desk, steaming while there's coffee in it
     if (mug.where === "desk" && !sipping(now)) {
       paint(ctx, MUG, DESK_PALETTE, MUG_AT.x, MUG_AT.y);
@@ -524,10 +541,29 @@ const createGouravThings = ({ layer, onTouch, onPerson }) => {
   });
   desk.onPress((e) => {
     if (e.type === "click" && onHim(e)) return;
-    const { x } = artAt(e);
-    onTouch(Number.isFinite(x) && x >= MUG_X && mug.where === "desk" ? "mug" : "desk");
+    const { x, y } = artAt(e);
+    if (lunch && x < LUNCH_AT.x + LUNCH[0].length && y >= LUNCH_AT.y && y < LUNCH_AT.y + LUNCH.length) onTouch("lunch");
+    else onTouch(Number.isFinite(x) && x >= MUG_X && mug.where === "desk" ? "mug" : "desk");
   });
   machine.onPress(() => onTouch("machine"));
+  embrace.onPress(() => onTouch("guest"));
+
+  // the hug: drawn as on her bench (her on the left, PARK_SEATS.hug), then
+  // mirrored, so she's on his right; eyes shut
+  const drawEmbrace = () => {
+    const { ctx } = embrace;
+    ctx.clearRect(0, 0, EMBRACE_W * SCALE, EMBRACE_H * SCALE);
+    ctx.save();
+    ctx.translate(EMBRACE_W * SCALE, 0);
+    ctx.scale(-1, 1);
+    // her feet are a row higher in her picture than his
+    paint(ctx, shut(HER_FRAMES.embrace), HER_PALETTE, PARK_SEATS.hug.her.x, 1);
+    paint(ctx, shut(GOURAV_FRAMES.embrace), GOURAV_PALETTE, PARK_SEATS.hug.him.x);
+    EMBRACE_ARMS.his.forEach(([x, y, text]) => paint(ctx, [text], GOURAV_PALETTE, x, y));
+    EMBRACE_ARMS.hers.forEach(([x, y, text]) => paint(ctx, [text], HER_PALETTE, x, y));
+    ctx.restore();
+  };
+  drawEmbrace();
   shelf.onPress(() => {
     shelf.puff("📖", "note");
     onTouch("shelf");
@@ -538,10 +574,39 @@ const createGouravThings = ({ layer, onTouch, onPerson }) => {
   // machine beside it
   const shelfLeft = () => window.innerWidth - EDGE - 30 - SHELF_W * SCALE;
   const machineLeft = () => shelfLeft() - 28 - COFFEE_W * SCALE;
+  const spot = () => deskLeft() + (SEATED_AT.x + SEATED_W / 2) * SCALE;
+  // the hug's picture, with his middle where he stands up from his chair
+  const embraceLeft = () => spot() - (EMBRACE_W - PARK_SEATS.hug.him.x - GOURAV_W / 2) * SCALE;
 
   return {
     // where he sits to work: his middle, in px from the left
-    spot: () => deskLeft() + (SEATED_AT.x + SEATED_W / 2) * SCALE,
+    spot,
+    // where she stands when she visits him: at his right, by his desk, where
+    // she is in their hug
+    visitorSpot: () => embraceLeft() + (EMBRACE_W - PARK_SEATS.hug.her.x - HER_W / 2) * SCALE,
+    // she's come to see him (he stays turned round in his chair), or gone
+    setVisitor(on) {
+      visitor = on;
+      turned = seated && on;
+    },
+    // the lunch she brings: on his desk, and eaten
+    putLunch() {
+      lunch = true;
+      desk.puff("🍱", "note");
+    },
+    eatLunch() {
+      if (!lunch) return;
+      lunch = false;
+      desk.puff("😋", "note");
+    },
+    hasLunch: () => lunch,
+    // the two of them hugging in front of his desk (their own sprites hidden
+    // meanwhile), hearts floating up
+    embrace(on) {
+      hugging = on;
+      embrace.box.style.display = on ? "" : "none";
+      heartAt = 0;
+    },
     // where he stands at the coffee machine, his mug in reach of the spout
     machineSpot: () => machineLeft() - 24,
     // where he stands to read: in front of his bookshelf, to the left a bit so
@@ -564,9 +629,9 @@ const createGouravThings = ({ layer, onTouch, onPerson }) => {
       }
     },
     seated: () => seated,
-    // he looks round when he talks
+    // he looks round when he talks (or while she's there)
     setTalking(talking) {
-      turned = seated && talking;
+      turned = seated && (talking || visitor);
     },
     // for his app: how full his mug is (0 to 1), and lines of code typed
     report: () => ({ coffee: mug.where === "machine" ? 1 : mug.sips / SIPS, lines }),
@@ -621,6 +686,7 @@ const createGouravThings = ({ layer, onTouch, onPerson }) => {
         mug.sips,
         sipping(now),
         bob,
+        lunch,
         Math.floor(performance.now() / 500) % 2,
       ].join(":");
       if (key !== drawn) {
@@ -637,6 +703,11 @@ const createGouravThings = ({ layer, onTouch, onPerson }) => {
       desk.place(deskLeft(), floor - DESK_H * SCALE);
       shelf.place(shelfLeft(), floor - SHELF_H * SCALE);
       machine.place(machineLeft(), floor - COFFEE_H * SCALE);
+      embrace.place(embraceLeft(), floor - EMBRACE_H * SCALE);
+      if (hugging && now >= heartAt) {
+        heartAt = now + HEARTS_EVERY;
+        embrace.puff(Math.random() < 0.7 ? "💕" : "❤️", "note");
+      }
       robot.tick(now, lastTick === null ? 0 : Math.min(now - lastTick, 0.05));
       lastTick = now;
     },
@@ -837,9 +908,9 @@ const createHerThings = ({ layer, onTouch, onPainted, onPerson }) => {
 
 /**
  * The things of the visitor's companion, on `layer`. onTouch(name) when one
- * is clicked: "desk", "mug", "machine", "shelf", "robot" (his), "easel",
- * "easelDone", "bird" (her parakeet), "tree", "bench" or "guest" (Gourav,
- * visiting her on the bench);
+ * is clicked: "desk", "mug", "lunch", "machine", "shelf", "robot" (his),
+ * "easel", "easelDone", "bird" (her parakeet), "tree", "bench" or "guest"
+ * (the other one, visiting: on her bench, or hugging at his desk);
  * onPainted(picture) when she finishes a painting; onPerson(pointerdown) when
  * Gourav is grabbed in his chair, or she is on her bench.
  */
