@@ -172,6 +172,7 @@ export const THING_LINES = {
   machine: ["My coffee machine. Best thing I own ☕", "That's where all my energy comes from ☕", "One mug, coming up… later ☕"],
   easel: ["Not finished yet. No peeking! 🎨", "It's coming along… 🎨", "Guess what it's going to be!"],
   easelDone: ["Do you like it? 🎨", "Not bad, right? 😊", "I'll start a new one soon!"],
+  lunch: ["She brought me lunch 🍱", "Steel tiffin. Still warm 🍲", "Don't touch, that's mine 😄"],
   bench: ["My favourite bench 🌳", "Gourav and I sit here sometimes 💕", "Come and sit, it's lovely here 🌸"],
   tree: ["My blossom tree 🌸", "It blooms all year here. A little magic ✨", `${BIRD_NAME} likes this tree too 💙`],
 };
@@ -329,6 +330,71 @@ export const VISIT_CLICK = {
 };
 // she's carried off, or called away: off he goes
 export const VISIT_CUT = ["Hey! Bring her back! 😄", "Okay, okay, back to work 😅", "See you later! 💕"];
+
+// and the other way round: with Gourav as the companion, she comes to see
+// him at his desk now and then, with lunch for him. (Their hug uses HUG_ASK
+// and HUG_SAYS too.) What she says walking up:
+export const DESK_VISIT_HELLO = ["Knock knock! 💕", "Surprise! 🌸", "Lunch delivery! 🍱"];
+// what they talk about, him turned round in his chair
+export const DESK_VISIT_TALKS = [
+  [
+    { who: "gourav", text: "Hey, you! What are you doing here? 💕" },
+    { who: "her", text: "Bringing you lunch. I know you skipped it 🍱" },
+    { who: "gourav", text: "…How did you know? 😅" },
+    { who: "her", text: "I always know 💕" },
+  ],
+  [
+    { who: "her", text: "How's the code going? 💻" },
+    { who: "gourav", text: "One bug left. Then it's done!" },
+    { who: "her", text: "You said that yesterday 😆" },
+    { who: "gourav", text: "…It's a different bug 😅" },
+  ],
+  [
+    { who: "gourav", text: "You came all this way? 💕" },
+    { who: "her", text: "Of course. I missed you 💕" },
+    { who: "her", text: "And I made your favourite 🍲" },
+    { who: "gourav", text: "Best. Day. Ever 😄" },
+  ],
+  [
+    { who: "her", text: "Is that your third coffee? ☕" },
+    { who: "gourav", text: "…Second. Maybe fourth 😅" },
+    { who: "her", text: "Water. Now 💧" },
+    { who: "gourav", text: "Yes, ma'am 😄" },
+  ],
+  [
+    { who: "her", text: `${BIRD_NAME} says hi! He misses you` },
+    { who: "gourav", text: "Tell him I'll come by this evening 💙" },
+    { who: "her", text: "Now he'll squawk your name all day 😆" },
+  ],
+];
+// she has to go
+export const DESK_VISIT_BYE = [
+  [
+    { who: "her", text: "Eat while it's warm, okay? 🍲" },
+    { who: "gourav", text: "Promise. Thank you 💕" },
+  ],
+  [
+    { who: "her", text: "I'll let you work. Don't stay up late! 🌙" },
+    { who: "gourav", text: "I won't. See you tonight 💕" },
+  ],
+  [
+    { who: "her", text: "Okay, back to my painting 🎨" },
+    { who: "gourav", text: "Paint me something nice 💕" },
+  ],
+];
+// back at work, he eats the lunch she brought
+export const LUNCH_THOUGHTS = [
+  { text: "She made my favourite 🍲 💕", picture: "herWave" },
+  { text: "Best lunch ever. She's the best 💕", picture: "herWave" },
+  { text: "Mmm… now I can code all day 🍱", picture: "herPainting" },
+];
+// clicked while she's visiting him: him, and her
+export const DESK_VISIT_CLICK = {
+  gourav: ["She came to see me! 💕", "She brought me lunch 🍱", "Isn't she the best? 💕"],
+  her: ["Shh, I'm visiting him 💕", "Make sure he eats, okay? 🍲", "He works too hard, doesn't he? 💕"],
+};
+// he's carried off, or called away: off she goes
+export const DESK_VISIT_CUT = ["Hey! Bring him back! 😄", "Okay, okay, I'll let you work 💕", "Eat your lunch! 🍱"];
 
 // her, finishing a painting (castArt.js PAINTINGS)
 export const PAINTED = {
