@@ -20,6 +20,11 @@ import {
   COFFEE_RUN,
   COFFEE_THOUGHTS,
   DESK_DONE,
+  DESK_VISIT_BYE,
+  DESK_VISIT_CLICK,
+  DESK_VISIT_CUT,
+  DESK_VISIT_HELLO,
+  DESK_VISIT_TALKS,
   DROPPED,
   EMPTY_MUG,
   MUSIC_FOCUS,
@@ -29,6 +34,7 @@ import {
   HER_NAME,
   HUG_ASK,
   HUG_SAYS,
+  LUNCH_THOUGHTS,
   MUSINGS,
   PAINTED,
   PAINT_THOUGHTS,
@@ -75,8 +81,16 @@ const VISIT_CHANCE = 0.7; // how often Gourav comes to sit with her
 const VISIT_AFTER = [4000, 9000]; // ms after she sits down that he walks in
 const HUG_FOR = 6000; // ms they hug
 const AFTER_VISIT_FOR = [5000, 9000]; // ms she stays on the bench once he's gone
+const DESK_VISIT_CHANCE = 0.3; // how often she comes to see Gourav while he works
+const DESK_VISIT_AFTER = [6000, 14_000]; // ms after he sits down that she walks in
+const VISIT_GAP = 90_000; // ms at least between one visit and the next
+const LUNCH_AFTER = [8000, 14_000]; // ms after she's gone that he eats the lunch she brought
 
 const NAMES = { gourav: "Gourav", her: HER_NAME };
+// who comes to visit whom: he sits with her on her bench, she brings him
+// lunch at his desk
+const GUEST = { her: "gourav", gourav: "her" };
+const GUEST_LABELS = { her: "Gourav, come to see her", gourav: `${HER_NAME}, come to see him` };
 const LABELS = {
   gourav: "Gourav, who made this desktop, your guide. Click him for a tip, or drag him about.",
   her: `${HER_NAME}, a girl about Gourav's age, your guide. Click her for a tip, or drag her about.`,
@@ -105,7 +119,7 @@ const desktopReady = () =>
 
 const CompanionOnScreen = ({ who }) => {
   const root = useRef(null); // holds their canvas and bubble
-  const guestRoot = useRef(null); // Gourav, visiting her on her park bench
+  const guestRoot = useRef(null); // the other one, come to visit
   const layer = useRef(null); // their things
   const stage = useRef(null);
   const script = useRef(null);
@@ -128,10 +142,11 @@ const CompanionOnScreen = ({ who }) => {
         return playing ? (synth.position() * songs[current].bpm) / 60 : null;
       },
     });
-    // with her, Gourav comes to visit now and then: he walks in, sits with
-    // her on her park bench, and off he goes again
+    // the other one comes to visit now and then: Gourav sits with her on her
+    // park bench, she brings him lunch at his desk; then off they go again
+    const guestWho = GUEST[who];
     const guestCanvas = guestRoot.current?.querySelector("canvas");
-    const guest = guestCanvas ? createPerson("gourav", { root: guestRoot.current, canvas: guestCanvas, still }) : null;
+    const guest = guestCanvas ? createPerson(guestWho, { root: guestRoot.current, canvas: guestCanvas, still }) : null;
     if (guest) guestRoot.current.style.visibility = "hidden";
     // whoever's talking: their mouth moves, on the screen or on her bench
     const voice = (name, body) => ({
@@ -142,7 +157,7 @@ const CompanionOnScreen = ({ who }) => {
       act: (pose, seconds) => body.act(pose, seconds),
     });
     const play = createScript({
-      people: { [who]: voice(who, person), ...(guest && { gourav: voice("gourav", guest) }) },
+      people: { [who]: voice(who, person), ...(guest && { [guestWho]: voice(guestWho, guest) }) },
       show: (next) => {
         setLine(next);
         setTyped(0);
@@ -182,9 +197,9 @@ const CompanionOnScreen = ({ who }) => {
           say(pick(ROBOT_LINES));
           return;
         }
-        // Gourav, sitting with her on her bench
+        // the other one, visiting: on her bench, or hugging him at his desk
         if (name === "guest") {
-          say({ who: "gourav", text: pick(VISIT_CLICK.gourav) });
+          guestClick();
           return;
         }
         // his bookshelf: a word, and his book opens
@@ -210,27 +225,77 @@ const CompanionOnScreen = ({ who }) => {
     let benchUntil = 0;
     let visitAt = 0;
     let visit = null; // { stage, next } while he's here
-    let visits = 0; // times he's come this visit
-    const guestSays = (text) => ({ who: "gourav", text });
+    let visits = 0; // times they've come this visit
+    let visitedAt = -Infinity; // when the last visit ended
+    let lunchAt = 0; // when he eats the lunch she brought
+    const guestSays = (text) => ({ who: guestWho, text });
     // they talk if they share their thoughts; quietly, they just sit
     const talkTogether = (lines) => {
       if (usePixieStore.getState().chatty) say(...lines);
     };
-    // he's off the screen again
+    // they're off the screen again
     const guestGone = () => {
       if (guestRoot.current) guestRoot.current.style.visibility = "hidden";
       visit = null;
+      visitedAt = performance.now();
       if (onBench) {
         benchUntil = performance.now() + between(...AFTER_VISIT_FOR);
         think(pick(AFTER_VISIT));
       }
+      // and he has his lunch, back at work
+      if (who === "gourav" && things.hasLunch()) lunchAt = performance.now() + between(...LUNCH_AFTER);
     };
-    // up he gets from the bench, and away
+    // the visit's over: up he gets from her bench, or she lets go of him at
+    // his desk; and away the visitor goes
     const guestUp = () => {
-      things.hug(false);
-      things.sit("him", false);
+      if (who === "her") {
+        things.hug(false);
+        things.sit("him", false);
+      } else {
+        things.embrace(false);
+        things.setVisitor(false);
+        person.setHidden(things.seated());
+      }
       guest.setHidden(false);
       guest.stopWork();
+    };
+    // with Gourav: she walks up to his desk with lunch, and he turns round
+    const startDeskVisit = () => {
+      visitAt = 0;
+      visits += 1;
+      visit = { stage: "coming", next: 0 };
+      // at his desk till she's gone
+      person.keepWorking();
+      guestRoot.current.style.visibility = "";
+      guest.enter(false);
+      guest.work({
+        at: things.visitorSpot,
+        pose: "stand",
+        face: -1,
+        seconds: Infinity,
+        onStart: () => {
+          if (!visit) return;
+          things.setVisitor(true);
+          things.putLunch();
+          visit = { stage: "talk", next: performance.now() + 3000 };
+          talkTogether(pick(DESK_VISIT_TALKS));
+        },
+      });
+      if (usePixieStore.getState().chatty) setTimeout(() => visit?.stage === "coming" && say(guestSays(pick(DESK_VISIT_HELLO))), 600);
+    };
+    // he gets up from his chair for their hug, and stays standing there
+    const standForHug = () => {
+      person.stopWork();
+      person.work({
+        at: things.spot,
+        pose: "stand",
+        face: 1,
+        seconds: Infinity,
+        // carried off, or called away, mid-hug
+        onEnd: () => {
+          if (visit && visit.stage !== "going") cutVisit();
+        },
+      });
     };
     const startVisit = () => {
       visitAt = 0;
@@ -263,7 +328,7 @@ const CompanionOnScreen = ({ who }) => {
       visit = { stage: "going", next: 0 };
       guest.leave(guestGone);
       setTimeout(() => {
-        if (!play.busy() && usePixieStore.getState().chatty) say(guestSays(pick(VISIT_CUT)));
+        if (!play.busy() && usePixieStore.getState().chatty) say(guestSays(pick(who === "her" ? VISIT_CUT : DESK_VISIT_CUT)));
       }, 1800);
     };
     // a visit, a step at a time, once what they're saying is said
@@ -271,21 +336,39 @@ const CompanionOnScreen = ({ who }) => {
       if (!visit || play.busy() || now < visit.next) return;
       if (visit.stage === "talk") {
         visit = { stage: "ask", next: now + 1200 };
+        // at his desk, he gets up
+        if (who === "gourav") standForHug();
         talkTogether([pick(HUG_ASK)]);
       } else if (visit.stage === "ask") {
-        things.hug(true);
+        // in her bench, or in a picture of them in front of his desk
+        if (who === "her") things.hug(true);
+        else {
+          things.embrace(true);
+          person.setHidden(true);
+          guest.setHidden(true);
+        }
         visit = { stage: "hug", next: now + HUG_FOR };
         setTimeout(() => visit?.stage === "hug" && talkTogether([pick(HUG_SAYS)]), 1500);
       } else if (visit.stage === "hug") {
-        things.hug(false);
+        if (who === "her") things.hug(false);
+        else {
+          things.embrace(false);
+          person.setHidden(false);
+          guest.setHidden(false);
+        }
         visit = { stage: "bye", next: now + 2500 };
-        talkTogether(pick(VISIT_BYE));
+        talkTogether(pick(who === "her" ? VISIT_BYE : DESK_VISIT_BYE));
       } else if (visit.stage === "bye") {
-        guestUp();
         visit = { stage: "going", next: Infinity };
+        guestUp();
         // a wave goodbye, then away
         guest.act("raise", 1.4);
         setTimeout(() => visit?.stage === "going" && guest.leave(guestGone), 1400);
+        // and back to his desk he goes
+        if (who === "gourav") {
+          person.stopWork();
+          startWork();
+        }
       }
     };
     const sitOnBench = () => {
@@ -314,9 +397,15 @@ const CompanionOnScreen = ({ who }) => {
         },
       });
     };
-    // his visit, from the watch below
+    // visits, from the watch below: hers to his desk, while he's working
+    // (not mid-coffee or reading), and his to her bench
     const benchWatch = (now) => {
       stepVisit(now);
+      if (who === "gourav") {
+        if (visitAt && now >= visitAt && !visit && things.seated() && person.working() && !coffeeRun && !play.busy() && !fullScreen())
+          startDeskVisit();
+        return;
+      }
       if (!onBench) return;
       if (visitAt && now >= visitAt && !visit && !play.busy() && !fullScreen()) startVisit();
       else if (!visit && !visitAt && now >= benchUntil && !play.busy()) person.stopWork();
@@ -339,7 +428,7 @@ const CompanionOnScreen = ({ who }) => {
       // Gourav doesn't dance: music helps him focus, so he says so and
       // gets on with his work (his head bobs to it at his desk, castThings.js)
       if (who === "gourav") {
-        if (!greeted || coffeeRun) return;
+        if (!greeted || coffeeRun || visit) return;
         if (usePixieStore.getState().chatty) setTimeout(() => say(pick(MUSIC_FOCUS)), 300);
         if (person.free() && thingsOn() && !fullScreen()) startWork();
         return;
@@ -361,9 +450,9 @@ const CompanionOnScreen = ({ who }) => {
 
     // a click on them is their next line, in turn
     talk.current = () => {
-      // with Gourav: a word about him
+      // mid-visit: a word about the other one
       if (visit) {
-        say(pick(VISIT_CLICK[who]));
+        say(pick((who === "her" ? VISIT_CLICK : DESK_VISIT_CLICK)[who]));
         return;
       }
       const lines = CLICKS[who];
@@ -372,8 +461,8 @@ const CompanionOnScreen = ({ who }) => {
       // on her bench she stays sitting (no pose)
       say(onBench && typeof next !== "string" ? next.text : next);
     };
-    // a click on Gourav, walking in or off
-    const guestClick = () => say(guestSays(pick(VISIT_CLICK.gourav)));
+    // a click on the visitor: a word from them
+    const guestClick = () => say(guestSays(pick(who === "her" ? VISIT_CLICK.gourav : DESK_VISIT_CLICK.her)));
     guestCanvas?.addEventListener("click", guestClick);
 
     // press and drag to pick them up (out of his chair, too); let go and
@@ -519,10 +608,18 @@ const CompanionOnScreen = ({ who }) => {
           things.setBusy(true);
           if (sits) person.setHidden(true);
           thinkAt = performance.now() + between(...THINK_EVERY);
+          // now and then she comes to see him while he works
+          const rested = performance.now() - visitedAt > VISIT_GAP;
+          if (who === "gourav" && guest && !visit && rested && Math.random() < DESK_VISIT_CHANCE)
+            visitAt = performance.now() + between(...DESK_VISIT_AFTER);
         },
         onEnd: (done) => {
           things.setBusy(false);
           person.setHidden(false);
+          if (!visit) visitAt = 0;
+          // carried off or called away while she's here (not when he gets
+          // up to hug her): off she goes
+          if (visit && visit.stage !== "ask" && visit.stage !== "going") cutVisit();
           // a break before the next spell of work
           workAt = performance.now() + between(...WORK_EVERY);
           // stopped on the way back: the mug goes on the desk anyway
@@ -531,7 +628,7 @@ const CompanionOnScreen = ({ who }) => {
             things.putMug(true);
             coffeeRun = false;
           }
-          if (done && !coffeeRun && who === "gourav" && listening() && Math.random() < 0.5) say(pick(DESK_DONE));
+          if (done && !coffeeRun && !visit && who === "gourav" && listening() && Math.random() < 0.5) say(pick(DESK_DONE));
         },
       });
     };
@@ -612,7 +709,7 @@ const CompanionOnScreen = ({ who }) => {
           ? "coffee"
           : reading && person.working()
             ? "read"
-            : onBench && visit && !["coming", "going"].includes(visit.stage)
+            : visit && !["coming", "going"].includes(visit.stage)
               ? "date"
               : onBench
                 ? "bench"
@@ -677,7 +774,7 @@ const CompanionOnScreen = ({ who }) => {
 
       // at work, a thought now and then. Gourav's are mostly about coffee:
       // a sip, and when the mug's empty, more
-      if (person.working() && !coffeeRun && now >= thinkAt && !play.busy()) {
+      if (person.working() && !coffeeRun && !visit && now >= thinkAt && !play.busy()) {
         thinkAt = now + between(...THINK_EVERY);
         const roll = Math.random();
         if (who === "gourav" && reading) think(pick(READ_THOUGHTS));
@@ -697,16 +794,22 @@ const CompanionOnScreen = ({ who }) => {
         } else if (roll < 0.35) think(pick(PAINT_THOUGHTS));
         else if (roll < 0.75) think(pick(THINKING_OF.her));
       }
-      if (sipAt && now >= sipAt) {
+      if (sipAt && now >= sipAt && !visit) {
         sipAt = 0;
         things.sip?.();
       }
-      if (upAt && now >= upAt && !play.busy()) {
+      // the lunch she brought him, once he's back at his desk
+      if (lunchAt && now >= lunchAt && things.seated?.() && !visit && !play.busy()) {
+        lunchAt = 0;
+        think(pick(LUNCH_THOUGHTS));
+        setTimeout(() => things.eatLunch(), 2500);
+      }
+      if (upAt && now >= upAt && !play.busy() && !visit) {
         upAt = 0;
         if (things.seated?.() && person.working()) goForCoffee();
       }
-      // resting on her bench: no tips or remarks meanwhile
-      if (!ok || onBench) return;
+      // resting on her bench, or visiting: no tips or remarks meanwhile
+      if (!ok || onBench || visit) return;
 
       // a tip now and then, or a word to themselves
       if (now >= tipAt) {
@@ -750,7 +853,7 @@ const CompanionOnScreen = ({ who }) => {
     return () => clearInterval(timer);
   }, [line]);
 
-  // a line in the bubble over whoever says it: them, or Gourav visiting her
+  // a line in the bubble over whoever says it: them, or the one visiting
   const bubble = line && (
     <button
       key={line.id}
@@ -787,17 +890,15 @@ const CompanionOnScreen = ({ who }) => {
           }}
         />
       </div>
-      {who === "her" && (
-        <div ref={guestRoot} className="cast-person gourav guest" style={CAST_SIZE.gourav}>
-          {line?.who === "gourav" && bubble}
-          <canvas
-            width={CAST_SIZE.gourav.width}
-            height={CAST_SIZE.gourav.height}
-            className="cast-sprite"
-            aria-label="Gourav, come to see her"
-          />
-        </div>
-      )}
+      <div ref={guestRoot} className={clsx("cast-person guest", GUEST[who])} style={CAST_SIZE[GUEST[who]]}>
+        {line?.who === GUEST[who] && bubble}
+        <canvas
+          width={CAST_SIZE[GUEST[who]].width}
+          height={CAST_SIZE[GUEST[who]].height}
+          className="cast-sprite"
+          aria-label={GUEST_LABELS[who]}
+        />
+      </div>
     </div>
   );
 };
