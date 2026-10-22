@@ -21,7 +21,7 @@ const DOING = {
   dance: () => "Dancing to the music 🎶",
   read: () => "Reading a book 📖",
   bench: () => "Sitting on her park bench 🌳",
-  date: () => "On the bench with Gourav 💕",
+  date: (who) => (who === "her" ? "On the bench with Gourav 💕" : "With her at his desk 💕"),
   held: () => "Being carried!",
   fall: () => "Falling!",
 };
@@ -194,7 +194,7 @@ export const CastTodayPane = ({ who }) => {
       <p>What {HE[who]}'s been up to on the desktop this visit.</p>
 
       {who === "gourav" ? (
-        <div className="cast-stats">
+        <div className="cast-stats four">
           <div>
             <span aria-hidden="true">☕</span>
             <b>{vitals?.mugs ?? 0}</b>
@@ -209,6 +209,11 @@ export const CastTodayPane = ({ who }) => {
             <span aria-hidden="true">💭</span>
             <b>{thoughts.length}</b>
             <small>thoughts</small>
+          </div>
+          <div>
+            <span aria-hidden="true">💕</span>
+            <b>{vitals?.visits ?? 0}</b>
+            <small>{vitals?.visits === 1 ? "visit" : "visits"} from her</small>
           </div>
         </div>
       ) : (
@@ -227,7 +232,7 @@ export const CastTodayPane = ({ who }) => {
             <div>
               <span aria-hidden="true">💕</span>
               <b>{vitals?.visits ?? 0}</b>
-              <small>visits from Gourav</small>
+              <small>{vitals?.visits === 1 ? "visit" : "visits"} from Gourav</small>
             </div>
           </div>
           {vitals?.paintings.length > 0 && (
