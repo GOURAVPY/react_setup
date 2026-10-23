@@ -173,6 +173,12 @@ const LEFT_ARM = {
   ],
   // round behind Gourav, hugging him (castArt.js draws her hand on his far side)
   none: [],
+  // her hands together under a heart (the other arm draws the heart)
+  heart: [
+    [6, 15, "KK"],
+    [6, 16, "KRRSSK"],
+    [7, 17, "KKKKK"],
+  ],
 };
 
 const mirror = (pieces) => pieces.map(([x, y, text]) => [HER_W - x - text.length, y, [...text].reverse().join("")]);
@@ -183,6 +189,14 @@ const RIGHT_ARM = {
   out: mirror(LEFT_ARM.out),
   clap: mirror(LEFT_ARM.clap),
   none: [],
+  heart: [
+    ...mirror(LEFT_ARM.heart),
+    [9, 13, "KK.KK"],
+    [8, 14, "KNNKNNK"],
+    [8, 15, "KNNNNNK"],
+    [9, 16, "KNNNK"],
+    [10, 17, "KNK"],
+  ],
   // held out at the easel (castArt.js), with a brush
   paint: [
     [17, 12, "KKKK"],
@@ -207,6 +221,10 @@ const POSES = {
   out: { skirt: "step", left: "out", right: "out" },
   clap: { skirt: "stand", left: "clap", right: "clap" },
   twirl: { skirt: "step", left: "up", right: "down" },
+  // more of her dances: pointing out to the side (her robot dance), and
+  // making a heart with her hands
+  point: { skirt: "stand", left: "down", right: "out" },
+  heart: { skirt: "stand", left: "heart", right: "heart" },
   // on her park bench, her hands in her lap; and hugging Gourav there, her
   // head on his shoulder, her arm round him
   sit: { skirt: "sit", left: "down", right: "down", sit: true },
