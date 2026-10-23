@@ -26,35 +26,108 @@ const GRAVITY = 2200; // px/s² when dropped
 const DANCE_HOP = 12; // px, a hop in a dance
 const DANCE_SWAY = 6; // px side to side
 
-// how each of them dances to a song, a beat at a time: (count, phase) →
-// { pose, facing, dx, dy, sparkle }. Gourav doesn't dance (music helps him
-// focus, Companions.jsx); she has an eight-beat routine: a wave, a clap, the
-// other way, a clap, a hop, a twirl, arms wide, and a hop with a sparkle,
-// swaying side to side all the while.
+// how each of them dances to a song, a beat at a time, in one of their
+// styles: (count, phase) → { pose, facing, dx, dy, sparkle, puff }. Gourav
+// doesn't dance (music helps him focus, Companions.jsx); she has a style for
+// each song (SONG_DANCES), each an eight-beat routine.
+const swayOf = (count, phase, size = DANCE_SWAY) => Math.sin(((count + phase) * Math.PI) / 2) * size;
+const hopOf = (phase, height = DANCE_HOP) => -Math.sin(Math.PI * phase) * height;
 const DANCES = {
-  her: (count, phase) => {
-    const sway = Math.sin(((count + phase) * Math.PI) / 2) * DANCE_SWAY;
-    const hop = -Math.sin(Math.PI * phase) * DANCE_HOP;
-    switch (count % 8) {
-      case 0:
-        return { pose: "raise", facing: 1, dx: sway };
-      case 1:
-        return { pose: "clap", facing: 1, dx: sway };
-      case 2:
-        return { pose: "raise", facing: -1, dx: sway };
-      case 3:
-        return { pose: "clap", facing: -1, dx: sway };
-      case 4:
-        return { pose: "jump", facing: 1, dy: hop };
-      case 5:
-        // a quick spin: round and round in the beat
-        return { pose: "twirl", facing: Math.floor(phase * 4) % 2 ? -1 : 1 };
-      case 6:
-        return { pose: "out", facing: 1, dx: sway };
-      default:
-        return { pose: "jump", facing: -1, dy: hop, sparkle: true };
-    }
+  her: {
+    // pop: a wave, a clap, the other way, a clap, a hop, a twirl, arms wide,
+    // and a hop with a sparkle, swaying side to side all the while
+    pop: (count, phase) => {
+      const sway = swayOf(count, phase);
+      const hop = hopOf(phase);
+      switch (count % 8) {
+        case 0:
+          return { pose: "raise", facing: 1, dx: sway };
+        case 1:
+          return { pose: "clap", facing: 1, dx: sway };
+        case 2:
+          return { pose: "raise", facing: -1, dx: sway };
+        case 3:
+          return { pose: "clap", facing: -1, dx: sway };
+        case 4:
+          return { pose: "jump", facing: 1, dy: hop };
+        case 5:
+          // a quick spin: round and round in the beat
+          return { pose: "twirl", facing: Math.floor(phase * 4) % 2 ? -1 : 1 };
+        case 6:
+          return { pose: "out", facing: 1, dx: sway };
+        default:
+          return { pose: "jump", facing: -1, dy: hop, sparkle: true };
+      }
+    },
+    // slow and easy: a wide sway, stepping from foot to foot, turning every
+    // two bars, a wave and a clap now and then
+    sway: (count, phase) => {
+      const facing = count % 8 < 4 ? 1 : -1;
+      const dx = swayOf(count, phase, DANCE_SWAY * 2);
+      if (count % 8 === 3 || count % 8 === 7) return { pose: "clap", facing, dx };
+      if (count % 4 === 1) return { pose: "raise", facing, dx };
+      return { pose: phase < 0.5 ? "stand" : "step", facing, dx };
+    },
+    // like Neel: flapping her arms like wings twice a beat, little hops,
+    // turning round every bar, and a big flap up with a sparkle
+    bird: (count, phase) => {
+      const facing = count % 8 < 4 ? 1 : -1;
+      const flap = Math.floor(phase * 2) % 2 ? "stand" : "out";
+      if (count % 8 === 7) return { pose: "jump", facing, dy: hopOf(phase, DANCE_HOP * 1.5), sparkle: true };
+      return { pose: flap, facing, dy: hopOf(phase, DANCE_HOP / 2) };
+    },
+    // slow and sweet: swaying, a wave, heart hands with a heart floating up,
+    // a slow twirl, and heart hands again
+    heart: (count, phase) => {
+      const sway = swayOf(count, phase);
+      switch (count % 8) {
+        case 0:
+        case 1:
+          return { pose: "stand", facing: 1, dx: sway };
+        case 2:
+          return { pose: "raise", facing: 1, dx: sway };
+        case 3:
+        case 4:
+          return { pose: "heart", facing: 1, dx: sway, puff: count % 8 === 3 ? "💕" : null };
+        case 5:
+          return { pose: "twirl", facing: phase < 0.5 ? -1 : 1 };
+        default:
+          return { pose: "heart", facing: -1, dx: sway, puff: count % 8 === 6 ? "💕" : null };
+      }
+    },
+    // robot: stiff and sharp, snapping from pose to pose, no sway; pointing
+    // one way and the other, arms out, a clap, a wave each side
+    robot: (count) => {
+      const snap = count % 2 ? 3 : -3;
+      switch (count % 8) {
+        case 0:
+          return { pose: "point", facing: 1, dx: snap };
+        case 1:
+          return { pose: "point", facing: -1, dx: snap };
+        case 2:
+          return { pose: "out", facing: 1 };
+        case 3:
+          return { pose: "stand", facing: 1, dy: -4 };
+        case 4:
+          return { pose: "raise", facing: 1, dx: snap };
+        case 5:
+          return { pose: "raise", facing: -1, dx: snap };
+        case 6:
+          return { pose: "clap", facing: 1 };
+        default:
+          return { pose: "out", facing: -1, dy: -4, sparkle: true };
+      }
+    },
   },
+};
+
+// which style she dances to each song in the Music app (songs.js)
+export const SONG_DANCES = {
+  "pixel-sunrise": "pop",
+  "coffee-and-code": "sway",
+  "neels-song": "bird",
+  "half-a-heart": "heart",
+  "through-the-portal": "robot",
 };
 
 export const TYPE_SPEED = 28; // ms per letter as a bubble fills in
@@ -136,6 +209,7 @@ export const createPerson = (who, { root, canvas, still, onLand, beat }) => {
     vy: 0, // px/s, falling
     holding: null, // something in their hand ("mug": the "mug" and "mugStep" poses)
     danceUntil: 0, // s: dancing to the music till then
+    danceStyle: "pop", // how: one of their DANCES
     leaving: null, // walking off the screen: what to do once they're gone
   };
   let drawn = "";
@@ -253,15 +327,17 @@ export const createPerson = (who, { root, canvas, still, onLand, beat }) => {
       let dx = 0;
       if (on !== null && DANCES[who]) {
         const count = Math.floor(on);
-        const move = DANCES[who](count, on - count);
+        const styles = DANCES[who];
+        const move = (styles[me.danceStyle] ?? styles.pop)(count, on - count);
         me.target = me.x;
         me.facing = move.facing;
         dance = move.pose;
         dx = move.dx ?? 0;
         y += move.dy ?? 0;
-        if (move.sparkle && count !== me.sparkled) {
+        if ((move.sparkle || move.puff) && count !== me.sparkled) {
           me.sparkled = count;
-          puff("✨", "sparkle");
+          if (move.sparkle) puff("✨", "sparkle");
+          else puff(move.puff, "note");
         }
       }
       if (me.hopAt !== null) {
@@ -363,11 +439,12 @@ export const createPerson = (who, { root, canvas, still, onLand, beat }) => {
       me.poseUntil = performance.now() / 1000 + seconds;
     },
 
-    // dances for a while, in time with the music (see beat): stopping
-    // whatever they were doing
-    dance(seconds) {
+    // dances for a while, in time with the music (see beat), in a style of
+    // theirs (DANCES): stopping whatever they were doing
+    dance(seconds, style = "pop") {
       if (!DANCES[who] || me.held || me.air > 0) return false;
       endJob(false);
+      me.danceStyle = style;
       me.pose = null;
       me.target = me.x;
       me.danceUntil = performance.now() / 1000 + seconds;

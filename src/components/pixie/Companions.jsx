@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
-import { CAST_SIZE, TYPE_SPEED, createPerson, createScript } from "./cast";
+import { CAST_SIZE, SONG_DANCES, TYPE_SPEED, createPerson, createScript } from "./cast";
 import { createCastThings } from "./castThings";
 import ThoughtPicture from "./ThoughtPicture";
 import {
@@ -14,7 +14,7 @@ import {
   BIRD_OWN_SONG,
   BIRD_REPLY,
   BIRD_SAYS,
-  DANCE_LINES,
+  STYLE_LINES,
   CALLED,
   CODE_THOUGHTS,
   COFFEE_RUN,
@@ -436,8 +436,10 @@ const CompanionOnScreen = ({ who }) => {
       }
       if (greeted) {
         person.stopWork();
-        if (person.dance(songLeft(state)) && usePixieStore.getState().chatty && Math.random() < 0.5) {
-          setTimeout(() => say(pick(DANCE_LINES[who])), 300);
+        // her own style for each song
+        const style = SONG_DANCES[state.songs[state.current].id] ?? "pop";
+        if (person.dance(songLeft(state), style) && usePixieStore.getState().chatty && Math.random() < 0.6) {
+          setTimeout(() => say(pick(STYLE_LINES[style])), 300);
         }
       }
       if (!things.birdSay) return;

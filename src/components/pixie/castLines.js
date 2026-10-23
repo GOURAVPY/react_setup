@@ -113,8 +113,13 @@ export const MUSINGS = {
 };
 
 // a song starts in the Music app: she dances…
-export const DANCE_LINES = {
-  her: ["Dance with me! 💃", "My favourite! 🎶", "Music! Let's dance 💕"],
+// in her style for that song (cast.js SONG_DANCES), with a word about it
+export const STYLE_LINES = {
+  pop: ["Dance with me! 💃", "My favourite! 🎶"],
+  sway: ["Slow and easy… ☕", "A coffee-shop sway 🎶"],
+  bird: [`Dancing like ${BIRD_NAME}! 🐦`, "Flap, flap! 💙"],
+  heart: ["This one's for Gourav 💕", "Our song… 💕"],
+  robot: ["Robot dance! 🤖", "Beep boop, beep boop 🤖"],
 };
 // …and Gourav doesn't: music helps him focus, and back to work he goes
 export const MUSIC_FOCUS = [
