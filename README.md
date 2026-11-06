@@ -12,12 +12,15 @@ It's built with React, Vite, Tailwind, GSAP and Zustand. No UI kit and no game e
 | **Browser** | A real browser window: an address bar, search, and sites shown in a frame. Sites that refuse to be framed open in a cloud Chrome (Hyperbeam) or a new tab |
 | **Gallery** | Photos |
 | **Contact** | Ways to reach me |
-| **Terminal** | A working terminal with its own commands |
+| **Skills** (Terminal) | A working terminal with its own commands |
 | **Arcade** | Pac-Man |
 | **Music** | Five chiptune songs, played by the site itself (Web Audio), with a visualizer |
 | **Pixie** | The app of the visitor's companion: what they're doing, their thoughts, their day |
-| **Book** | A flip-book about me |
+| **Gourav's Book** | A pixel-art flip-book about me |
 | **Settings** | Wallpaper, theme, dock size, auto-hide, minimize effect, icon and text style |
+| **Archive** (Trash) | Old work |
+
+Every app's icon and full list of features: [Every app in the dock](docs/DOCK-APPS.md).
 
 On the desktop:
 
@@ -72,6 +75,7 @@ The short version: **every window lives in one store.** `store/window.js` holds 
 ## More docs
 
 - [Build your own](docs/BUILD-YOUR-OWN.md): how this was built, step by step, so you can build the same thing.
+- [Every app in the dock](docs/DOCK-APPS.md): each app's name, icon and features.
 - [Add an app to the dock](docs/ADD-A-DOCK-APP.md): the five places a new app touches.
 - [Smooth animation](docs/ANIMATION.md): the tricks that keep it at 60 fps, and the mistakes we made first.
 - [The companions](docs/COMPANIONS.md): how the pixel characters are drawn, moved and made to talk.
